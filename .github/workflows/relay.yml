@@ -5,7 +5,7 @@ on:
     - cron: "6 0 * * 1-5"     # 09:06 KST 월–금
   workflow_dispatch:
     inputs:
-      phase: { description: morning | open, default: morning }
+      phase: { description: morning | open | backfill, default: morning }
       date: { description: "YYYY-MM-DD (재현용, 비우면 오늘)", default: "" }
 permissions: { contents: write }
 concurrency: relay

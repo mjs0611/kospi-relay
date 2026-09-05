@@ -198,9 +198,13 @@ def freq_html(f):
     return f'<section class="freq"><p class="lede">{html.escape(sentence(f))}</p><div class="bar">{bar}</div><p class="legend">{leg} <span class="n">n={n} · 뉴욕 {f["bin"]} 구간</span></p></section>'
 
 
+def pending_text(status):
+    return "09:00 이후 채워집니다" if status == "pending" else ("오늘 휴장" if status == "closed" else "")
+
+
 def page(D, prev, us, vix_lv, opened, f, status, prev_link):
     date_ko = f"{D.year}년 {D.month}월 {D.day}일 {'월화수목금토일'[D.weekday()]}요일"
-    pending = "09:00 이후 채워집니다" if status == "pending" else ("오늘 휴장" if status == "closed" else "")
+    pending = pending_text(status)
     us_day = next((raw_d for raw_d in [prev["date"]]), prev["date"])
     svg = chart_svg(prev, us, vix_lv, opened, pending, *us_hours(us_day))
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -248,13 +252,33 @@ def build(phase):
     day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
     (day / "index.html").write_text(htm.replace('href="../', 'href="../'), encoding="utf-8")
     (SITE / "index.html").write_text(htm.replace('href="../', 'href="./'), encoding="utf-8")
-    (SITE / "latest.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
-        "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "freq": f}, ensure_ascii=False, default=float), encoding="utf-8")
+    payload = json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
+        "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "freq": f,
+        "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, pending_text(status), *us_hours(prev["date"])),
+        "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float)
+    (SITE / "latest.json").write_text(payload, encoding="utf-8")
+    (SITE / "days").mkdir(exist_ok=True); (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(payload, encoding="utf-8")
+    (SITE / "index.json").write_text(json.dumps(sorted((p.stem for p in (SITE / "days").glob("*.json")), reverse=True)), encoding="utf-8")
     (SITE / ".nojekyll").touch()
     screenshot(SITE / "index.html", SITE / "relay.png")
     if phase == "morning" and os.environ.get("TELEGRAM_BOT_TOKEN"):
         telegram(SITE / "relay.png", sentence(f) if f else "밤사이 뉴욕 휴장")
     print(f"built {D.date()} {status} freq={f}")
+
+
+def backfill(n):
+    raw = fetch(); hist = align(raw); K = raw["KOSPI"]
+    for D in K.index[-n:]:
+        prev, us, vix_lv, opened = today_nodes(raw, D)
+        f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1])) if us.get("SPY") and us.get("SOXX") else None
+        day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
+        (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, "filled", None), encoding="utf-8")
+        (SITE / "days").mkdir(exist_ok=True)
+        (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": "filled", "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
+            "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "freq": f,
+            "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, "", *us_hours(prev["date"]))}, ensure_ascii=False, default=float), encoding="utf-8")
+    (SITE / "index.json").write_text(json.dumps(sorted((p.stem for p in (SITE / "days").glob("*.json")), reverse=True)), encoding="utf-8")
+    print("backfilled", n)
 
 
 def screenshot(html_path, png):
@@ -283,4 +307,5 @@ def selfcheck():
 
 
 if __name__ == "__main__":
-    {"morning": lambda: build("morning"), "open": lambda: build("open"), "selfcheck": selfcheck}[sys.argv[1]]()
+    {"morning": lambda: build("morning"), "open": lambda: build("open"), "selfcheck": selfcheck,
+     "backfill": lambda: backfill(int(sys.argv[2]) if len(sys.argv) > 2 else 20)}[sys.argv[1]]()
