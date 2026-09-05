@@ -1,0 +1,27 @@
+:root{--paper:#EDF0F5;--ink:#10172A;--muted:#6C7488;--rule:#C6CDDA;--band:#E2E7F0;--up:#D9433B;--down:#2C5FD6;--flat:#98A0B3;
+--sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;--mono:"Azeret Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+/* html body: TDS 청크가 뒤늦게 주입하는 body 전역 스타일보다 특이도 높게 */
+html body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);word-break:keep-all;-webkit-text-size-adjust:100%}
+.app{color:var(--ink);max-width:560px;margin:0 auto;padding:8px 16px calc(28px + env(safe-area-inset-bottom))}
+.sheet{padding-top:6px}
+.stamp{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--muted);padding:6px 2px 4px;border-bottom:1.5px solid var(--ink)}
+.stamp b{font-family:var(--mono);color:var(--ink);font-size:11px}
+.stamp .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink)}
+.chart{margin:4px -8px 0}.chart svg{width:100%;height:auto;display:block}
+.freq{border-top:1px solid var(--rule);padding-top:14px;margin-top:2px}
+.lede{font-size:16.5px;line-height:1.5;font-weight:600;letter-spacing:-.01em;margin:0 0 12px}
+.bar{display:flex;height:8px;border-radius:2px;overflow:hidden;gap:2px}.seg{min-width:2px}
+.legend{font-family:var(--mono);font-size:11px;margin:8px 0 0;color:var(--muted)}.legend .n{margin-left:8px}
+.note{font-size:12px;color:var(--muted);margin:10px 2px 0}
+.actions{margin:18px 0 6px}
+.btn-fallback{width:100%;height:56px;border:0;border-radius:16px;background:var(--ink);color:#fff;font:600 17px var(--sans);opacity:.9}
+.past h2,.about h2{font-size:13px;color:var(--muted);font-weight:600;margin:22px 0 10px;letter-spacing:.02em}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.chips::-webkit-scrollbar{display:none}.chips::after{content:"";flex:0 0 8px}
+.chip{flex:0 0 auto;height:34px;padding:0 13px;border-radius:17px;border:1px solid var(--rule);background:#fff;color:var(--ink);font:600 13px var(--mono)}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip:disabled{opacity:.6}
+.about p{font-size:14px;line-height:1.6;color:var(--ink);margin:0 0 10px}
+.about .fine{font-size:11.5px;color:var(--muted);line-height:1.55;margin-top:14px}
+:focus-visible{outline:2px solid var(--down);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
