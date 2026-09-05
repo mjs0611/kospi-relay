@@ -1,10 +1,17 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import Relay from './components/Relay'
 import { cachedLatest, dateFromPath, fetchDay, fetchIndex, fetchLatest } from './lib/data'
 import { haptic, shareRelay } from './lib/ait'
 import type { RelayDay } from './lib/types'
 
 const TdsButton = lazy(() => import('./components/TdsButton'))
+
+// TDS 청크가 어떤 이유로든 죽어도 앱 전체가 백지가 되지 않게 — 같은 치수의 일반 버튼으로 강등
+class Guard extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  render() { return this.state.failed ? this.props.fallback : this.props.children }
+}
 
 function fmt(d: string) { return `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}` }
 
@@ -42,12 +49,14 @@ export default function App() {
       {stale && <p className="note">최신 데이터를 못 받아 마지막으로 본 릴레이를 보여드려요.</p>}
 
       <div className="actions">
-        <Suspense fallback={<button className="btn-fallback" disabled>공유하기</button>}>
-          <TdsButton display="block" size="large" variant="primary" color="dark"
-            onClick={() => { haptic('tap'); void shareRelay(shown.sentence ?? `${fmt(shown.date)} 코스피 릴레이`) }}>
-            공유하기
-          </TdsButton>
-        </Suspense>
+        <Guard fallback={<button className="btn-fallback" onClick={() => void shareRelay(shown.sentence ?? `${fmt(shown.date)} 코스피 릴레이`)}>공유하기</button>}>
+          <Suspense fallback={<button className="btn-fallback" disabled>공유하기</button>}>
+            <TdsButton color="dark" display="full" size="xlarge"
+              onClick={() => { haptic('tap'); void shareRelay(shown.sentence ?? `${fmt(shown.date)} 코스피 릴레이`) }}>
+              공유하기
+            </TdsButton>
+          </Suspense>
+        </Guard>
       </div>
 
       {dates.length > 0 && (
