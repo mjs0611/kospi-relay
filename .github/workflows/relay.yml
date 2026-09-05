@@ -1,0 +1,34 @@
+name: relay
+on:
+  schedule:
+    - cron: "45 21 * * 0-4"   # 06:45 KST 월–금
+    - cron: "6 0 * * 1-5"     # 09:06 KST 월–금
+  workflow_dispatch:
+    inputs:
+      phase: { description: morning | open, default: morning }
+      date: { description: "YYYY-MM-DD (재현용, 비우면 오늘)", default: "" }
+permissions: { contents: write }
+concurrency: relay
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: gh-pages, path: site }
+        continue-on-error: true
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt && playwright install --with-deps chromium
+      - name: phase
+        run: echo "PHASE=${{ github.event.inputs.phase || (github.event.schedule == '6 0 * * 1-5' && 'open' || 'morning') }}" >> $GITHUB_ENV
+      - run: rm -rf site/.git && python relay.py "$PHASE"
+        env:
+          RELAY_DATE: ${{ github.event.inputs.date }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          keep_files: true
