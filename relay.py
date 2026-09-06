@@ -78,6 +78,37 @@ def sentence(f):
             f"다음 날 코스피 시가는 {k}번({k / f['n']:.0%}) {word} 열렸습니다.")
 
 
+ZONE_WORD = {"up": "위로", "down": "아래로", "flat": "±0.3% 안에서"}
+
+
+def zone_of(x):
+    return None if x is None else ("up" if x > FLAT else "down" if x < -FLAT else "flat")
+
+
+def headline(f, opened, status):
+    """카드 맨 위 한 줄. 아침엔 질문(이런 밤 뒤 시가는 보통 어디?), 시가가 오면 답(오늘은 거기 들었나).
+    예측 아님 — 과거 빈도와 오늘 시가의 분류만. 누적 적중률은 non-goal이라 만들지 않는다.
+    렌더러는 lead + <b class=z-{zone}>num</b> + tail 로 그린다(웹·PNG·미니앱 공통)."""
+    ok = bool(f) and f["n"] >= 30
+    maj = max(("up", "down", "flat"), key=lambda z: f[z]) if ok else None
+    if status == "pending":
+        if not ok: return {"lead": "답은 09:00 시가 — ", "num": "", "tail": "비슷한 밤이 드물어 빈도는 생략", "zone": None}
+        return {"lead": f"이런 밤 {f['n']}번 중 ", "num": f"{f[maj] / f['n']:.0%}", "tail": f"는 {ZONE_WORD[maj]} 열렸습니다 — 답은 09:00 시가", "zone": maj}
+    if status == "closed" or opened is None:
+        if not ok: return {"lead": "오늘 휴장", "num": "", "tail": "", "zone": None}
+        return {"lead": "오늘 휴장 — 이런 밤 뒤엔 ", "num": f"{f[maj] / f['n']:.0%}", "tail": f"가 {ZONE_WORD[maj]} 열렸습니다", "zone": maj}
+    z = zone_of(opened)
+    if not ok: return {"lead": "오늘 시가 ", "num": pct(opened), "tail": ". 비슷한 밤이 드물어 빈도는 생략", "zone": z}
+    share = f[z] / f["n"]
+    tail = (f". 이런 밤 뒤 {share:.0%}만 그랬던 쪽, {ZONE_WORD[z]} 열렸습니다" if share < 0.4
+            else f". 이런 밤 뒤 {share:.0%}가 그랬듯 {ZONE_WORD[z]} 열렸습니다")
+    return {"lead": "오늘 시가 ", "num": pct(opened), "tail": tail, "zone": z}
+
+
+def head_html(h):
+    e = html.escape
+    return f'<p class="headline">{e(h["lead"])}<b class="z-{h["zone"] or "flat"}">{e(h["num"])}</b>{e(h["tail"])}</p>'
+
 def today_nodes(raw, D):
     K, Q = raw["KOSPI"], raw["KOSDAQ"]
     P = K.index[K.index < D][-1]
@@ -143,8 +174,9 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h):
         o.append(f'<line x1="{L-8}" y1="{y:.1f}" x2="{L-2}" y2="{y:.1f}" stroke="var(--ink)"/>')
     yq = (sy(15.5) + sy(us_open_h)) / 2
     o.append(f'<text x="{x0:.1f}" y="{yq:.1f}" text-anchor="middle" fill="var(--muted)" font-family="var(--sans)" font-size="10" opacity=".8">유럽 장은 생략 — 코스피 시가와 거의 무관</text>')
-    # 어제 마감 노드
+    # 어제 마감 노드 — 맥락일 뿐 질문의 주역이 아니라 톤다운. 주역은 뉴욕 마감→오늘 시가
     y = sy(15.5)
+    o.append('<g opacity=".6">')
     for key, r, lab, dy in [("kosdaq", 4, "코스닥", 14), ("kospi", 6, "코스피", -8)]:
         if prev[key] is None: continue
         x = sx(prev[key])
@@ -152,6 +184,7 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h):
         o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{color(prev[key])}"/>')
         anchor, tx = place(x, len(lab) + 7, L, R)
         o.append(f'<text x="{tx:.1f}" y="{y+dy+4:.1f}" text-anchor="{anchor}" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)">{lab} </tspan><tspan font-weight="700">{pct(prev[key])}</tspan></text>')
+    o.append('</g>')
     # 뉴욕 세션 (시가→종가 선)
     ya, yb = sy(us_open_h), sy(us_close_h)
     o.append(f'<rect x="{L}" y="{ya:.1f}" width="{R-L}" height="{yb-ya:.1f}" fill="var(--band)"/>')
@@ -176,6 +209,10 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h):
         o.append(f'<text x="{R}" y="{ya-8:.1f}" text-anchor="end" fill="var(--muted)"><tspan font-family="var(--sans)">VIX </tspan>{a:.1f} → <tspan fill="var(--ink)" font-weight="700">{b:.1f}</tspan></text>')
     # 오늘 시가 노드
     y = sy(33)
+    # ★ ±0.3% 밴드 — 헤드라인의 질문("이런 밤 뒤 시가는 보통 여기 안")을 차트 위에 그린다.
+    #   시가 점이 밴드 안이면 보합, 밖이면 위/아래. 답이 눈으로 먼저 읽힌다
+    o.append(f'<rect x="{sx(-FLAT):.1f}" y="{y-10:.1f}" width="{sx(FLAT)-sx(-FLAT):.1f}" height="20" rx="5" fill="var(--flat)" opacity=".16"/>')
+    o.append(f'<text x="{sx(FLAT)+4:.1f}" y="{y-13:.1f}" fill="var(--muted)" font-size="9">±0.3%</text>')
     if opened is None:
         o.append(f'<circle cx="{x0:.1f}" cy="{y:.1f}" r="6" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>')
         o.append(f'<text x="{x0+14:.1f}" y="{y+4:.1f}" fill="var(--muted)" font-family="var(--sans)" font-size="12">{e(pending_text)}</text>')
@@ -214,23 +251,42 @@ def page(D, prev, us, vix_lv, opened, f, status, prev_link):
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
-:root{{--paper:#EDF0F5;--ink:#10172A;--muted:#6C7488;--rule:#C6CDDA;--band:#E2E7F0;--up:#D9433B;--down:#2C5FD6;--flat:#98A0B3;
+/* 다크 홀로그래픽. 광원(인디고·틸)과 데이터 색(상승 빨강·하락 파랑)은 절대 섞지 않는다 —
+   섞으면 등락이 색으로 안 읽힌다. 광원은 카드 바탕, 데이터 색은 차트 안. */
+:root{{--paper:#0F1526;--ink:#EAEEF7;--muted:#98A3BC;--rule:rgba(255,255,255,.13);--band:rgba(255,255,255,.05);
+/* 상승 빨강·하락 파랑은 한국 시세 관례(아래 고지에도 명시). 다크에서 원래 값은 2.4~3.0:1이라 명도만 올렸다 */
+--up:#FF6B5E;--down:#6E9BFF;--flat:#98A3BA;--night:#6C4DE0;--dawn:#1FC8B8;--void:#080B18;
 --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;--mono:"Azeret Mono",ui-monospace,Menlo,monospace}}
-*{{box-sizing:border-box}}html,body{{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);word-break:keep-all}}
-.sheet{{width:540px;max-width:100%;margin:0 auto;padding:26px 24px 20px;display:flex;flex-direction:column;min-height:675px}}
-header{{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid var(--ink);padding-bottom:10px}}
+*{{box-sizing:border-box}}html,body{{margin:0;background:var(--void);color:var(--ink);font-family:var(--sans);word-break:keep-all}}
+/* 스크린샷은 .sheet만 잘라낸다 — 광원을 body가 아니라 카드 안에 둬야 텔레그램 PNG에도 실린다 */
+.sheet{{position:relative;width:540px;max-width:100%;margin:0 auto;padding:26px 24px 20px;display:flex;flex-direction:column;min-height:675px;
+background:radial-gradient(70% 24% at 20% -2%,rgba(108,77,224,.55) 0,transparent 62%),
+radial-gradient(58% 20% at 97% 3%,rgba(74,59,196,.45) 0,transparent 64%),
+radial-gradient(84% 26% at 50% 103%,rgba(31,200,184,.32) 0,transparent 64%),
+linear-gradient(180deg,#141438 0,#0A0D1E 46%,var(--void) 100%)}}
+/* 원래는 잉크 실선이었다. 다크에선 밝은 실선이 제목보다 세게 튀어 스펙트럼 한 줄로 바꿈 */
+header{{position:relative;display:flex;justify-content:space-between;align-items:baseline;padding-bottom:10px}}
+header::after{{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5px;background:linear-gradient(90deg,var(--night),var(--dawn),transparent)}}
 h1{{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0}}h1 small{{font-weight:500;color:var(--muted);font-size:12px;margin-left:8px;letter-spacing:0}}
 .stamp{{font-size:11.5px;color:var(--muted);text-align:right;line-height:1.5;letter-spacing:-.01em;white-space:nowrap}}.stamp b{{font-family:var(--mono);color:var(--ink);font-weight:700;font-size:11px}}
-.chart{{margin:6px -6px 0}}svg{{width:100%;height:auto;display:block}}
+/* ★ 시간축 광원 — SVG 세로축이 곧 시간이다(위 15:30 전일 마감 → 아래 09:00 오늘 시가).
+   축은 SVG 높이의 10~90% 구간(sy가 40..H-40으로 매핑)이라 스톱을 거기 맞췄다. 장식이 아니라 제목 */
+.chart{{margin:10px -6px 0;border-radius:14px;overflow:hidden;
+background:linear-gradient(180deg,rgba(108,77,224,.16) 10%,rgba(24,29,58,.05) 48%,rgba(31,200,184,.13) 90%)}}
+svg{{width:100%;height:auto;display:block}}
+/* 헤드라인 — 카드가 던지는 질문/답. 숫자만 등락색, 나머지는 잉크 */
+.headline{{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.35;margin:14px 0 0;word-break:keep-all}}
+.headline b{{font-variant-numeric:tabular-nums}}.z-up{{color:var(--up)}}.z-down{{color:var(--down)}}.z-flat{{color:var(--ink)}}
 .freq{{border-top:1px solid var(--rule);padding-top:14px;margin-top:4px}}
 .lede{{font-size:16.5px;line-height:1.5;font-weight:600;letter-spacing:-.01em;margin:0 0 12px;word-break:keep-all}}
-.bar{{display:flex;height:8px;border-radius:2px;overflow:hidden;gap:2px}}.seg{{min-width:2px}}
+.bar{{display:flex;height:9px;border-radius:3px;overflow:hidden;gap:2px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}}.seg{{min-width:2px}}
 .legend{{font-family:var(--mono);font-size:11px;margin:8px 0 0;color:var(--muted)}}.legend .n{{margin-left:6px}}
 footer{{margin-top:auto;padding-top:14px;font-size:10.5px;color:var(--muted);line-height:1.55;display:flex;justify-content:space-between;gap:12px}}
-footer a{{color:var(--muted)}}
+footer a{{color:var(--dawn)}}
 @media (max-width:480px){{.sheet{{padding:18px 14px 16px}}.lede{{font-size:15px}}header{{flex-direction:column;align-items:flex-start;gap:4px}}h1 small{{display:block;margin:2px 0 0}}.stamp{{text-align:left}}.stamp br{{display:none}}.stamp b{{margin-left:6px}}}}
 </style></head><body><div class="sheet">
 <header><h1>밤사이 코스피<small>전일 마감 → 뉴욕 → 오늘 시가, 릴레이 한 장</small></h1><div class="stamp">{date_ko}<br><b>{"06:45" if status=="pending" else "09:06"}</b> KST</div></header>
+{head_html(headline(f, opened, status))}
 <div class="chart">{svg}</div>
 {freq_html(f)}
 <footer><span>정보 제공 목적이며 투자 판단 자료가 아닙니다. 상승 빨강·하락 파랑. 변화율은 전일 종가 대비, 뉴욕은 ETF(SOXX·QQQ·SPY) 일별 시가·종가. 데이터 Yahoo Finance.</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">← {prev_link[5:]}</a><br>' if prev_link else ''}{SITE_URL.replace("https://","")}</span></footer>
@@ -240,13 +296,19 @@ footer a{{color:var(--muted)}}
 # ---------- pipeline ----------
 def build(phase):
     now = dt.datetime.now(KST); D = pd.Timestamp(os.environ.get("RELAY_DATE") or now.date())  # RELAY_DATE=YYYY-MM-DD 로컬 재현용
+    try: prior = json.loads((SITE / "latest.json").read_text(encoding="utf-8"))   # gh-pages 체크아웃본 — 재시도 크론 판별용
+    except Exception: prior = None
     raw = fetch()
     hist = align(raw)
     prev, us, vix_lv, opened = today_nodes(raw, D)
     if phase == "morning":
         opened = None            # 아침엔 시가 노드 비움 (과거 날짜 재현 시에도)
     f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1])) if us.get("SPY") and us.get("SOXX") else None
-    status = "pending" if phase == "morning" else ("filled" if opened is not None else "closed")
+    # open 단계에 시가가 없어도 휴장으로 단정하지 않는다 — 야후 반영이 09:09보다 늦을 수 있다.
+    # 재시도 크론이 뒤따르고, 마지막 크론(RELAY_FINAL=1)에서만 휴장으로 확정한다.
+    if phase == "morning": status = "pending"
+    elif opened is not None: status = "filled"
+    else: status = "closed" if os.environ.get("RELAY_FINAL") else "pending"
     prev_link = f"{prev['date']:%Y-%m-%d}" if (SITE / f"{prev['date']:%Y-%m-%d}").exists() else None
     htm = page(D, prev, us, vix_lv, opened, f, status, prev_link)
     day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
@@ -254,14 +316,15 @@ def build(phase):
     (SITE / "index.html").write_text(htm.replace('href="../', 'href="./'), encoding="utf-8")
     payload = json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
         "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "freq": f,
-        "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, pending_text(status), *us_hours(prev["date"])),
+        "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, pending_text(status), *us_hours(prev["date"])),
         "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float)
     (SITE / "latest.json").write_text(payload, encoding="utf-8")
     (SITE / "days").mkdir(exist_ok=True); (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(payload, encoding="utf-8")
     (SITE / "index.json").write_text(json.dumps(sorted((p.stem for p in (SITE / "days").glob("*.json")), reverse=True)), encoding="utf-8")
     (SITE / ".nojekyll").touch()
     screenshot(SITE / "index.html", SITE / "relay.png")
-    if phase == "morning" and os.environ.get("TELEGRAM_BOT_TOKEN"):
+    already_sent = bool(prior) and prior.get("date") == f"{D:%Y-%m-%d}" and prior.get("status") == "pending"   # 아침 재시도 크론
+    if phase == "morning" and os.environ.get("TELEGRAM_BOT_TOKEN") and not already_sent:
         telegram(SITE / "relay.png", sentence(f) if f else "밤사이 뉴욕 휴장")
     print(f"built {D.date()} {status} freq={f}")
 
@@ -276,7 +339,7 @@ def backfill(n):
         (SITE / "days").mkdir(exist_ok=True)
         (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": "filled", "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
             "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "freq": f,
-            "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, "", *us_hours(prev["date"]))}, ensure_ascii=False, default=float), encoding="utf-8")
+            "head": headline(f, opened, "filled"), "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, "", *us_hours(prev["date"]))}, ensure_ascii=False, default=float), encoding="utf-8")
     (SITE / "index.json").write_text(json.dumps(sorted((p.stem for p in (SITE / "days").glob("*.json")), reverse=True)), encoding="utf-8")
     print("backfilled", n)
 

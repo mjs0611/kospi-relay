@@ -1,8 +1,13 @@
 name: relay
 on:
   schedule:
-    - cron: "45 21 * * 0-4"   # 06:45 KST 월–금
-    - cron: "6 0 * * 1-5"     # 09:06 KST 월–금
+    # GitHub 스케줄은 지연·누락이 잦다(첫 예정 실행 9/7 06:45가 통째로 빠짐). 정각·45분 회피 + 재시도 크론.
+    # 파이프라인은 멱등이라 두 번 돌아도 같은 결과. 텔레그램 중복 발송은 relay.py가 막는다.
+    - cron: "47 21 * * 0-4"   # 06:47 KST 월–금 morning
+    - cron: "20 22 * * 0-4"   # 07:20 KST 월–금 morning 재시도
+    - cron: "9 0 * * 1-5"     # 09:09 KST 월–금 open
+    - cron: "40 0 * * 1-5"    # 09:40 KST 월–금 open 재시도 (야후 시가 반영 지연 대비)
+    - cron: "30 1 * * 1-5"    # 10:30 KST 월–금 open 최종 — 이때도 시가 없으면 휴장으로 확정
   workflow_dispatch:
     inputs:
       phase: { description: morning | open | backfill, default: morning }
@@ -21,10 +26,16 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt && playwright install --with-deps chromium
       - name: phase
-        run: echo "PHASE=${{ github.event.inputs.phase || (github.event.schedule == '6 0 * * 1-5' && 'open' || 'morning') }}" >> $GITHUB_ENV
+        run: |
+          S="${{ github.event.schedule }}"
+          P="${{ github.event.inputs.phase }}"
+          if [ -z "$P" ]; then case "$S" in *" 0 * * 1-5"|*" 1 * * 1-5") P=open;; *) P=morning;; esac; fi
+          echo "PHASE=$P" >> $GITHUB_ENV
+          if [ "$S" = "30 1 * * 1-5" ]; then echo "RELAY_FINAL=1" >> $GITHUB_ENV; fi
       - run: rm -rf site/.git && python relay.py "$PHASE"
         env:
           RELAY_DATE: ${{ github.event.inputs.date }}
+          RELAY_FINAL: ${{ env.RELAY_FINAL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       - uses: peaceiris/actions-gh-pages@v4
