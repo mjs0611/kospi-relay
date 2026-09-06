@@ -1,4 +1,4 @@
-"""코스피 릴레이 — 어제 코스피 마감 → 밤사이 뉴욕 → 오늘 코스피 시가, 한 장.
+"""밤사이 코스피 — 어제 코스피 마감 → 밤사이 뉴욕 → 오늘 코스피 시가, 한 장.
 
 python relay.py morning   # 06:45 KST: 밤사이 노드 + 조건부 빈도, 시가 노드 비움
 python relay.py open      # 09:06 KST: 오늘 시가 채움
@@ -208,9 +208,9 @@ def page(D, prev, us, vix_lv, opened, f, status, prev_link):
     us_day = next((raw_d for raw_d in [prev["date"]]), prev["date"])
     svg = chart_svg(prev, us, vix_lv, opened, pending, *us_hours(us_day))
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>코스피 릴레이 · {D:%Y-%m-%d}</title>
+<title>밤사이 코스피 · {D:%Y-%m-%d}</title>
 <meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
-<meta property="og:title" content="코스피 릴레이 {D:%m.%d}"><meta property="og:image" content="{SITE_URL}/relay.png"><meta property="og:description" content="{html.escape(sentence(f)) if f and f['n'] else '밤사이 흐름 한 장'}">
+<meta property="og:title" content="밤사이 코스피 {D:%m.%d}"><meta property="og:image" content="{SITE_URL}/relay.png"><meta property="og:description" content="{html.escape(sentence(f)) if f and f['n'] else '밤사이 흐름 한 장'}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -230,7 +230,7 @@ footer{{margin-top:auto;padding-top:14px;font-size:10.5px;color:var(--muted);lin
 footer a{{color:var(--muted)}}
 @media (max-width:480px){{.sheet{{padding:18px 14px 16px}}.lede{{font-size:15px}}header{{flex-direction:column;align-items:flex-start;gap:4px}}h1 small{{display:block;margin:2px 0 0}}.stamp{{text-align:left}}.stamp br{{display:none}}.stamp b{{margin-left:6px}}}}
 </style></head><body><div class="sheet">
-<header><h1>코스피 릴레이<small>전일 마감 → 밤사이 뉴욕 → 오늘 시가</small></h1><div class="stamp">{date_ko}<br><b>{"06:45" if status=="pending" else "09:06"}</b> KST</div></header>
+<header><h1>밤사이 코스피<small>전일 마감 → 뉴욕 → 오늘 시가, 릴레이 한 장</small></h1><div class="stamp">{date_ko}<br><b>{"06:45" if status=="pending" else "09:06"}</b> KST</div></header>
 <div class="chart">{svg}</div>
 {freq_html(f)}
 <footer><span>정보 제공 목적이며 투자 판단 자료가 아닙니다. 상승 빨강·하락 파랑. 변화율은 전일 종가 대비, 뉴욕은 ETF(SOXX·QQQ·SPY) 일별 시가·종가. 데이터 Yahoo Finance.</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">← {prev_link[5:]}</a><br>' if prev_link else ''}{SITE_URL.replace("https://","")}</span></footer>

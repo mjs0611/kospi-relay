@@ -1,4 +1,4 @@
-# 코스피 릴레이
+# 밤사이 코스피 (kospi-relay)
 
 전일 코스피 마감 → 밤사이 뉴욕(SOXX·QQQ·SPY·VIX) → 오늘 코스피 시가. 매일 아침 한 장 + 조건부 빈도 한 줄.
 예측·판정 없음. 과거 빈도 서술만. 설계: `docs/superpowers/specs/2026-09-05-kospi-relay-design.md`

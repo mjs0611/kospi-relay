@@ -49,10 +49,10 @@ export default function App() {
       {stale && <p className="note">최신 데이터를 못 받아 마지막으로 본 릴레이를 보여드려요.</p>}
 
       <div className="actions">
-        <Guard fallback={<button className="btn-fallback" onClick={() => void shareRelay(shown.sentence ?? `${fmt(shown.date)} 코스피 릴레이`)}>공유하기</button>}>
+        <Guard fallback={<button className="btn-fallback" onClick={() => void shareRelay(shown.sentence ?? `${fmt(shown.date)} 밤사이 코스피`)}>공유하기</button>}>
           <Suspense fallback={<button className="btn-fallback" disabled>공유하기</button>}>
             <TdsButton color="dark" display="full" size="xlarge"
-              onClick={() => { haptic('tap'); void shareRelay(shown.sentence ?? `${fmt(shown.date)} 코스피 릴레이`) }}>
+              onClick={() => { haptic('tap'); void shareRelay(shown.sentence ?? `${fmt(shown.date)} 밤사이 코스피`) }}>
               공유하기
             </TdsButton>
           </Suspense>
@@ -61,7 +61,7 @@ export default function App() {
 
       {dates.length > 0 && (
         <section className="past">
-          <h2>지난 릴레이</h2>
+          <h2>지난 밤들</h2>
           <div className="chips">
             {dates.slice(0, 15).map((d) => (
               <button key={d} className={`chip ${d === shown.date ? 'on' : ''}`} onClick={() => void pick(d)} disabled={busy === d}>
@@ -73,7 +73,7 @@ export default function App() {
       )}
 
       <section className="about">
-        <h2>이 화면은</h2>
+        <h2>릴레이 카드</h2>
         <p>전날 15:30 코스피 마감에서 밤사이 뉴욕 세션(반도체 SOXX · 나스닥100 QQQ · S&amp;P500 SPY, 공포지수 VIX)을 거쳐 09:00 오늘 코스피 시가까지, 바통이 어떻게 넘어왔는지 시간 순서 그대로 그립니다. 매일 06:45에 밤사이 부분이, 09:06에 시가가 채워집니다.</p>
         <p>빈도 문장은 예측이 아닙니다. 2021년부터 뉴욕이 비슷하게 마감한 밤들을 모아, 그 다음 날 코스피 시가가 어느 쪽으로 열렸는지 세어 보여드릴 뿐입니다. 표본 수(n)를 함께 표시합니다.</p>
         <p className="fine">정보 제공 목적이며 투자 판단 자료가 아닙니다. 특정 종목·매매를 안내하지 않습니다. 변화율은 전일 종가 대비, 뉴욕은 ETF 일별 시가·종가. 상승 빨강·하락 파랑. 데이터 Yahoo Finance.</p>
