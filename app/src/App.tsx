@@ -1,5 +1,6 @@
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import Relay from './components/Relay'
+import BannerAd from './components/BannerAd'
 import { cachedLatest, dateFromPath, fetchDay, fetchIndex, fetchLatest } from './lib/data'
 import { haptic, shareRelay } from './lib/ait'
 import type { RelayDay } from './lib/types'
@@ -78,6 +79,9 @@ export default function App() {
         <p>빈도 문장은 예측이 아닙니다. 2021년부터 뉴욕이 비슷하게 마감한 밤들을 모아, 그 다음 날 코스피 시가가 어느 쪽으로 열렸는지 세어 보여드릴 뿐입니다. 표본 수(n)를 함께 표시합니다.</p>
         <p className="fine">정보 제공 목적이며 투자 판단 자료가 아닙니다. 특정 종목·매매를 안내하지 않습니다. 변화율은 전일 종가 대비, 뉴욕은 ETF 일별 시가·종가. 상승 빨강·하락 파랑. 데이터 Yahoo Finance.</p>
       </section>
+
+      {/* 고지 아래 = 콘텐츠와 광고 사이에 고지가 완충. 카드→공유 동선은 안 끊는다 */}
+      <BannerAd />
     </main>
   )
 }

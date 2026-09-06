@@ -19,6 +19,11 @@ export default function Relay({ day }: { day: RelayDay }) {
         <b>{day.status === 'pending' ? '06:45' : '09:06'}</b>
         <span className="tag">{day.status === 'pending' ? '시가 대기' : day.status === 'closed' ? '휴장' : `시가 ${pct(day.open)}`}</span>
       </header>
+      {day.head && (
+        <p className="headline">
+          {day.head.lead}<b className={`z-${day.head.zone ?? 'flat'}`}>{day.head.num}</b>{day.head.tail}
+        </p>
+      )}
       {/* SVG는 파이프라인이 만든 그대로 — 웹·PNG·미니앱이 한 그림 */}
       <div className="chart" dangerouslySetInnerHTML={{ __html: day.svg }} />
       {f && f.n > 0 && legend && (
