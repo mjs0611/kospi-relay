@@ -5,23 +5,42 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--paper:#EDF0F5;--ink:#10172A;--muted:#6C7488;--rule:#C6CDDA;--band:#E2E7F0;--up:#D9433B;--down:#2C5FD6;--flat:#98A0B3;
+/* 다크 홀로그래픽. 광원(인디고·틸)과 데이터 색(상승 빨강·하락 파랑)은 절대 섞지 않는다 —
+   섞으면 등락이 색으로 안 읽힌다. 광원은 카드 바탕, 데이터 색은 차트 안. */
+:root{--paper:#0F1526;--ink:#EAEEF7;--muted:#98A3BC;--rule:rgba(255,255,255,.13);--band:rgba(255,255,255,.05);
+/* 상승 빨강·하락 파랑은 한국 시세 관례(아래 고지에도 명시). 다크에서 원래 값은 2.4~3.0:1이라 명도만 올렸다 */
+--up:#FF6B5E;--down:#6E9BFF;--flat:#98A3BA;--night:#6C4DE0;--dawn:#1FC8B8;--void:#080B18;
 --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;--mono:"Azeret Mono",ui-monospace,Menlo,monospace}
-*{box-sizing:border-box}html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);word-break:keep-all}
-.sheet{width:540px;max-width:100%;margin:0 auto;padding:26px 24px 20px;display:flex;flex-direction:column;min-height:675px}
-header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid var(--ink);padding-bottom:10px}
+*{box-sizing:border-box}html,body{margin:0;background:var(--void);color:var(--ink);font-family:var(--sans);word-break:keep-all}
+/* 스크린샷은 .sheet만 잘라낸다 — 광원을 body가 아니라 카드 안에 둬야 텔레그램 PNG에도 실린다 */
+.sheet{position:relative;width:540px;max-width:100%;margin:0 auto;padding:26px 24px 20px;display:flex;flex-direction:column;min-height:675px;
+background:radial-gradient(70% 24% at 20% -2%,rgba(108,77,224,.55) 0,transparent 62%),
+radial-gradient(58% 20% at 97% 3%,rgba(74,59,196,.45) 0,transparent 64%),
+radial-gradient(84% 26% at 50% 103%,rgba(31,200,184,.32) 0,transparent 64%),
+linear-gradient(180deg,#141438 0,#0A0D1E 46%,var(--void) 100%)}
+/* 원래는 잉크 실선이었다. 다크에선 밝은 실선이 제목보다 세게 튀어 스펙트럼 한 줄로 바꿈 */
+header{position:relative;display:flex;justify-content:space-between;align-items:baseline;padding-bottom:10px}
+header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5px;background:linear-gradient(90deg,var(--night),var(--dawn),transparent)}
 h1{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0}h1 small{font-weight:500;color:var(--muted);font-size:12px;margin-left:8px;letter-spacing:0}
 .stamp{font-size:11.5px;color:var(--muted);text-align:right;line-height:1.5;letter-spacing:-.01em;white-space:nowrap}.stamp b{font-family:var(--mono);color:var(--ink);font-weight:700;font-size:11px}
-.chart{margin:6px -6px 0}svg{width:100%;height:auto;display:block}
+/* ★ 시간축 광원 — SVG 세로축이 곧 시간이다(위 15:30 전일 마감 → 아래 09:00 오늘 시가).
+   축은 SVG 높이의 10~90% 구간(sy가 40..H-40으로 매핑)이라 스톱을 거기 맞췄다. 장식이 아니라 제목 */
+.chart{margin:10px -6px 0;border-radius:14px;overflow:hidden;
+background:linear-gradient(180deg,rgba(108,77,224,.16) 10%,rgba(24,29,58,.05) 48%,rgba(31,200,184,.13) 90%)}
+svg{width:100%;height:auto;display:block}
+/* 헤드라인 — 카드가 던지는 질문/답. 숫자만 등락색, 나머지는 잉크 */
+.headline{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.35;margin:14px 0 0;word-break:keep-all}
+.headline b{font-variant-numeric:tabular-nums}.z-up{color:var(--up)}.z-down{color:var(--down)}.z-flat{color:var(--ink)}
 .freq{border-top:1px solid var(--rule);padding-top:14px;margin-top:4px}
 .lede{font-size:16.5px;line-height:1.5;font-weight:600;letter-spacing:-.01em;margin:0 0 12px;word-break:keep-all}
-.bar{display:flex;height:8px;border-radius:2px;overflow:hidden;gap:2px}.seg{min-width:2px}
+.bar{display:flex;height:9px;border-radius:3px;overflow:hidden;gap:2px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}.seg{min-width:2px}
 .legend{font-family:var(--mono);font-size:11px;margin:8px 0 0;color:var(--muted)}.legend .n{margin-left:6px}
 footer{margin-top:auto;padding-top:14px;font-size:10.5px;color:var(--muted);line-height:1.55;display:flex;justify-content:space-between;gap:12px}
-footer a{color:var(--muted)}
+footer a{color:var(--dawn)}
 @media (max-width:480px){.sheet{padding:18px 14px 16px}.lede{font-size:15px}header{flex-direction:column;align-items:flex-start;gap:4px}h1 small{display:block;margin:2px 0 0}.stamp{text-align:left}.stamp br{display:none}.stamp b{margin-left:6px}}
 </style></head><body><div class="sheet">
 <header><h1>밤사이 코스피<small>전일 마감 → 뉴욕 → 오늘 시가, 릴레이 한 장</small></h1><div class="stamp">2026년 9월 2일 수요일<br><b>09:06</b> KST</div></header>
+<p class="headline">오늘 시가 <b class="z-down">-3.08%</b>. 이런 밤 뒤 68%가 그랬듯 아래로 열렸습니다</p>
 <div class="chart"><svg viewBox="0 0 540 400" xmlns="http://www.w3.org/2000/svg" font-family="var(--mono)" font-size="11">
 <line x1="92.0" y1="30" x2="92.0" y2="370" stroke="var(--rule)" stroke-width="0.5" stroke-dasharray="2 4"/>
 <text x="92.0" y="22" text-anchor="middle" fill="var(--muted)">-4.0%</text>
@@ -54,12 +73,14 @@ footer a{color:var(--muted)}
 <text x="78" y="377.0" text-anchor="end" fill="var(--muted)" font-family="var(--sans)" font-size="10">오늘 시가</text>
 <line x1="84" y1="360.0" x2="90" y2="360.0" stroke="var(--ink)"/>
 <text x="281.0" y="104.0" text-anchor="middle" fill="var(--muted)" font-family="var(--sans)" font-size="10" opacity=".8">유럽 장은 생략 — 코스피 시가와 거의 무관</text>
+<g opacity=".6">
 <line x1="281.0" y1="40.0" x2="207.1" y2="40.0" stroke="var(--down)" stroke-width="2"/>
 <circle cx="207.1" cy="40.0" r="4" fill="var(--down)"/>
 <text x="219.1" y="58.0" text-anchor="start" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)">코스닥 </tspan><tspan font-weight="700">-1.56%</tspan></text>
 <line x1="281.0" y1="40.0" x2="291.9" y2="40.0" stroke="var(--up)" stroke-width="2"/>
 <circle cx="291.9" cy="40.0" r="6" fill="var(--up)"/>
 <text x="303.9" y="36.0" text-anchor="start" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)">코스피 </tspan><tspan font-weight="700">+0.23%</tspan></text>
+</g>
 <rect x="92" y="168.0" width="378" height="118.9" fill="var(--band)"/>
 <line x1="192.1" y1="168.0" x2="181.8" y2="286.9" stroke="var(--down)" stroke-width="2.5" stroke-linecap="round"/>
 <circle cx="192.1" cy="168.0" r="3" fill="var(--paper)" stroke="var(--down)" stroke-width="2"/>
@@ -77,6 +98,8 @@ footer a{color:var(--muted)}
 <line x1="181.8" y1="292.9" x2="181.8" y2="327.9" stroke="var(--down)" stroke-width=".8" opacity=".6"/>
 <text x="189.8" y="334.9" text-anchor="start" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)">반도체 </tspan><tspan font-weight="700">-2.10%</tspan></text>
 <text x="470" y="160.0" text-anchor="end" fill="var(--muted)"><tspan font-family="var(--sans)">VIX </tspan>14.9 → <tspan fill="var(--ink)" font-weight="700">16.3</tspan></text>
+<rect x="266.8" y="350.0" width="28.4" height="20" rx="5" fill="var(--flat)" opacity=".16"/>
+<text x="299.2" y="347.0" fill="var(--muted)" font-size="9">±0.3%</text>
 <line x1="281.0" y1="360.0" x2="135.6" y2="360.0" stroke="var(--down)" stroke-width="2"/>
 <circle cx="135.6" cy="360.0" r="7" fill="var(--down)"/>
 <text x="147.6" y="364.0" text-anchor="start" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)">코스피 시가 </tspan><tspan font-weight="700" font-size="13">-3.08%</tspan></text>
