@@ -212,7 +212,8 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h):
     # ★ ±0.3% 밴드 — 헤드라인의 질문("이런 밤 뒤 시가는 보통 여기 안")을 차트 위에 그린다.
     #   시가 점이 밴드 안이면 보합, 밖이면 위/아래. 답이 눈으로 먼저 읽힌다
     o.append(f'<rect x="{sx(-FLAT):.1f}" y="{y-10:.1f}" width="{sx(FLAT)-sx(-FLAT):.1f}" height="20" rx="5" fill="var(--flat)" opacity=".16"/>')
-    o.append(f'<text x="{sx(FLAT)+4:.1f}" y="{y-13:.1f}" fill="var(--muted)" font-size="9">±0.3%</text>')
+    # 라벨은 밴드 왼쪽 — 오른쪽은 뉴욕 마감 라벨 스택과 시가 라벨이 내려와 붐빈다(9/7 카드에서 확인)
+    o.append(f'<text x="{sx(-FLAT)-5:.1f}" y="{y+3:.1f}" text-anchor="end" fill="var(--muted)" font-size="9">±0.3%</text>')
     if opened is None:
         o.append(f'<circle cx="{x0:.1f}" cy="{y:.1f}" r="6" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>')
         o.append(f'<text x="{x0+14:.1f}" y="{y+4:.1f}" fill="var(--muted)" font-family="var(--sans)" font-size="12">{e(pending_text)}</text>')
