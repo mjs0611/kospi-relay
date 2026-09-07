@@ -33,24 +33,17 @@ background:conic-gradient(from 200deg,var(--night),var(--dawn),rgba(255,255,255,
 -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
 -webkit-mask-composite:xor;mask-composite:exclude}
 /* 헤더 구분선: 원래는 잉크 실선이었다. 다크에선 밝은 실선이 잉크보다 세게 튀어 스펙트럼 한 줄로 바꿈 */
-.stamp{position:relative;display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--muted);padding:6px 2px 10px;letter-spacing:.01em}
+.stamp{position:relative;display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:var(--muted);padding:4px 2px 9px}
 .stamp::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5px;background:linear-gradient(90deg,var(--night),var(--dawn),transparent)}
 .stamp b{font-family:var(--mono);color:var(--ink);font-size:11px}
 .stamp .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink)}
-/* 헤드라인. 카드의 질문 또는 답, 한 문장. 색은 차트가 말한다. 글은 잉크 한 색 */
-.headline{font-size:22px;font-weight:800;letter-spacing:-.022em;line-height:1.3;margin:16px 2px 2px;word-break:keep-all;font-variant-numeric:tabular-nums}
-/* ★ 시간축 광원 — 이 앱의 서명.
-   SVG 세로축이 곧 시간이다(위 15:30 전일 마감 → 아래 09:00 오늘 시가).
-   그래서 차트 뒤 그라디언트도 위가 밤(인디고) 아래가 새벽(틸)이다. 장식이 아니라 제목.
-   축은 SVG 높이의 10~90% 구간(sy가 40..H-40으로 매핑)이라 스톱을 거기 맞췄다.
-   페이지 배경이 아니라 차트 안에 두는 이유: 카드가 화면을 거의 덮어 배경에선 안 보인다 */
-.chart{position:relative;margin:10px -8px 0;border-radius:14px;overflow:hidden;
-background:linear-gradient(180deg,rgba(108,77,224,.16) 10%,rgba(24,29,58,.05) 48%,rgba(31,200,184,.13) 90%)}
+/* 제목 두 줄: 조건(작게, 뮤트) → 규칙(크게, 잉크). 오늘 시가는 그림의 마커가 말한다 */
+.cond{font-size:14px;font-weight:600;color:var(--muted);margin:14px 2px 3px}
+.claim{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:0 2px;word-break:keep-all;font-variant-numeric:tabular-nums}
+/* 원인 → 결과 그림. 시간축 광원은 시간축 차트와 함께 폐기 */
+.chart{position:relative;margin:18px 2px 0}
 .chart svg{width:100%;height:auto;display:block}
 
-/* 빈도 막대: 카드의 주장. 칸의 폭이 곧 빈도, 마커가 오늘 */
-.freqbar{margin:16px 2px 0}.freqbar svg{width:100%;height:auto;display:block;overflow:visible}
-.cap{font-size:11px;color:var(--muted);margin:2px 2px 0;text-align:right}
 .note{position:relative;z-index:1;font-size:12px;color:var(--muted);margin:10px 2px 0}
 
 .actions{position:relative;z-index:1;margin:18px 0 6px}

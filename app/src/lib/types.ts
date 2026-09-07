@@ -2,8 +2,8 @@ export type Pair = [number, number] | null
 
 export interface Freq { bin: string; n: number; up: number; flat: number; down: number; years: number }
 
-// 카드 맨 위 한 문장. 색은 차트가 말하므로 글은 잉크 한 색. zone은 참고용
-export interface Head { text: string; zone: 'up' | 'flat' | 'down' | null }
+// 제목 두 줄. cond = 조건('뉴욕이 크게 오른 밤'), claim = 규칙('다음 날 코스피는 10번 중 8번 위로 열렸다')
+export interface Head { cond: string; claim: string; zone: 'up' | 'flat' | 'down' | null }
 
 export interface RelayDay {
   date: string
@@ -13,8 +13,7 @@ export interface RelayDay {
   vix: Pair
   open: number | null
   freq: Freq | null
-  head?: Head | null           // 2026-09-07 이후 JSON에만 있음. 없으면 미표시
-  bar?: string                 // 빈도 막대 SVG. 카드의 주장. 없으면 미표시
+  head?: Head | null           // 없으면 미표시
   sentence: string | null
   svg: string
   built_at?: string
