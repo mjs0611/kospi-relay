@@ -15,6 +15,7 @@ export interface RelayDay {
   freq: Freq | null
   head?: Head | null           // 없으면 미표시
   sentence: string | null
-  svg: string
+  ny?: string                  // 밤사이 뉴욕 SVG
+  kr?: string                  // 다음 날 코스피 시가 SVG
   built_at?: string
 }

@@ -40,9 +40,11 @@ background:conic-gradient(from 200deg,var(--night),var(--dawn),rgba(255,255,255,
 /* 제목 두 줄: 조건(작게, 뮤트) → 규칙(크게, 잉크). 오늘 시가는 그림의 마커가 말한다 */
 .cond{font-size:14px;font-weight:600;color:var(--muted);margin:14px 2px 3px}
 .claim{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:0 2px;word-break:keep-all;font-variant-numeric:tabular-nums}
-/* 원인 → 결과 그림. 시간축 광원은 시간축 차트와 함께 폐기 */
-.chart{position:relative;margin:18px 2px 0}
-.chart svg{width:100%;height:auto;display:block}
+/* 원인 → 결과 두 칸. 폰에선 위아래로 쌓고 화살표는 아래를 향한다. 뉴욕 칸은 260px까지만(막대가 너무 커지지 않게) */
+.relay{position:relative;display:flex;flex-direction:column;gap:8px;margin:18px 2px 0}
+.ny{max-width:260px}.kr{width:100%}.relay svg{width:100%;height:auto;display:block}
+.arrow{width:16px;height:16px;transform:rotate(90deg);margin-left:6px}
+@media (min-width:600px){.relay{flex-direction:row;align-items:center;gap:14px}.ny{flex:0 0 190px}.kr{flex:1;min-width:0}.arrow{transform:none;margin:0}}
 
 .note{position:relative;z-index:1;font-size:12px;color:var(--muted);margin:10px 2px 0}
 

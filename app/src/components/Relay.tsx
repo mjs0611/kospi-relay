@@ -15,8 +15,14 @@ export default function Relay({ day }: { day: RelayDay }) {
       {day.head && (day.head.claim
         ? <><p className="cond">{day.head.cond}</p><p className="claim">{day.head.claim}</p></>
         : <p className="claim">{day.head.cond}</p>)}
-      {/* 원인 → 결과 그림은 파이프라인이 만든 그대로. 웹·PNG·미니앱이 한 그림 */}
-      <div className="chart" dangerouslySetInnerHTML={{ __html: day.svg }} />
+      {/* 원인 → 결과 두 칸은 파이프라인이 만든 그대로. 웹·PNG·미니앱이 한 그림. 폰에선 위아래로 쌓인다 */}
+      {day.ny && day.kr && (
+        <div className="relay">
+          <div className="ny" dangerouslySetInnerHTML={{ __html: day.ny }} />
+          <svg className="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M5,2 L11,8 L5,14" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <div className="kr" dangerouslySetInnerHTML={{ __html: day.kr }} />
+        </div>
+      )}
     </article>
   )
 }
