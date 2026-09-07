@@ -25,7 +25,7 @@ export default function BannerAd() {
     let attached: { destroy?: () => void } | undefined
     try {
       attached = TossAds.attachBanner(AD_GROUP_ID, ref.current, {
-        theme: 'dark',
+        theme: 'light',
         callbacks: { onNoFill: () => setHidden(true), onAdFailedToRender: () => setHidden(true) },
       })
     } catch { /* noop */ }

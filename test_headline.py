@@ -23,10 +23,10 @@ assert "위로" in sentence(fu)                                   # relay.py sel
 assert zone_of(FLAT) == "flat" and zone_of(FLAT + 1e-9) == "up" and zone_of(-FLAT - 1e-9) == "down"
 for s_ in (sentence(f), sentence(fu), h["cond"]):
     assert "—" not in s_ and "·" not in s_ and "습니다" not in s_ and "이런 밤" not in s_, s_
-ny = ny_svg(us); assert ny.count("<rect") == 3 and "+3.52%" in ny and "-0.39%" in ny, ny[:200]
+ny = ny_svg(us); assert ny.count("<rect") == 3 and "+3.52%" in ny and "-0.39%" in ny and "mono" not in ny, ny[:200]
 assert "뉴욕 휴장" in ny_svg({})
-kr = kr_svg(fu, 0.0334, "filled"); assert kr.count("<rect") == 3 and "위 80%" in kr and "+3.34%" in kr and kr.count("<path") == 1, kr[:300]   # 마커
-kr = kr_svg(fu, None, "pending");  assert "09:00" in kr and "<path" not in kr and "+3.34%" not in kr
+kr = kr_svg(fu, 0.0334, "filled"); assert kr.count("<rect") == 4 and "위" in kr and "80%" in kr and "오늘 " in kr and "+3.34%" in kr, kr[:300]   # 막대 3 + 오늘 행 칠
+kr = kr_svg(fu, None, "pending");  assert kr.count("<rect") == 3 and "09:00" in kr and "+3.34%" not in kr
 assert "빈도는 생략" in kr_svg(None, None, "pending")
-out = ns["head_html"](headline(fu, None, "pending")); assert '<p class="cond">' in out and '<p class="claim">' in out
+cond, claim = ns["head_html"](headline(fu, None, "pending")); assert cond.startswith('<p class="cond">') and claim.startswith('<p class="claim">')
 print("headline ok")

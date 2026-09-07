@@ -105,69 +105,56 @@ def sentence(f):
 
 
 def head_html(h):
+    """(밤 쪽 조건, 낮 쪽 규칙) 두 조각. 조건은 밤에, 규칙은 낮에 산다."""
     e = html.escape
-    return (f'<p class="cond">{e(h["cond"])}</p><p class="claim">{e(h["claim"])}</p>' if h["claim"]
-            else f'<p class="claim">{e(h["cond"])}</p>')
+    return (f'<p class="cond">{e(h["cond"])}</p>', f'<p class="claim">{e(h["claim"] or "오늘 코스피 시가")}</p>')
 
 
 def ny_svg(us):
-    """왼쪽 칸: 밤사이 뉴욕. 반도체·나스닥100·S&P500 가로 막대, 0선 기준. 214×100.
-    카드에선 오른쪽 칸과 나란히, 폰에선 위아래로 쌓인다(SVG를 둘로 나눈 이유: 하나로 두면 폰에서 글자가 7px로 줄어든다)."""
-    W, H = 214, 100
-    o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)">',
-         '<text x="0" y="13" fill="var(--muted)" font-size="11">밤사이 뉴욕</text>']
+    """밤 쪽: 밤사이 뉴욕. 호가창처럼 행마다 0선에서 뻗는 가로 막대(반도체·나스닥100·S&P500). 236×84.
+    색은 호스트 CSS 변수. 폰에선 낮 쪽 위에 쌓인다."""
+    W, H = 236, 84
+    o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
     vals = [us[k][1] for k in US if us.get(k)]
     if not vals:
-        o.append('<text x="0" y="62" fill="var(--muted)" font-size="12">뉴욕 휴장</text>')
+        o.append('<text x="0" y="46" fill="var(--muted)">뉴욕 휴장</text>')
     else:
-        x0, unit = 78, 70 / max(0.005, max(abs(v) for v in vals))   # 0선 x, 최대 막대 70px
-        o.append(f'<line x1="{x0}" y1="26" x2="{x0}" y2="{H}" stroke="var(--rule)" stroke-width="1"/>')
+        x0, unit = 76, 100 / max(0.005, max(abs(v) for v in vals))   # 0선 x, 최대 막대 100px
+        o.append(f'<line x1="{x0}" y1="2" x2="{x0}" y2="{H - 2}" stroke="var(--rule)" stroke-width="1"/>')
         for i, k in enumerate(US):
-            w = us.get(k); y = 40 + 24 * i
-            o.append(f'<text x="{x0 - 8}" y="{y + 4}" text-anchor="end" fill="var(--muted)" font-size="11">{LABEL[k]}</text>')
+            w = us.get(k); y = 16 + 26 * i
+            o.append(f'<text x="{x0 - 8}" y="{y + 4}" text-anchor="end" fill="var(--muted)">{LABEL[k]}</text>')
             if not w: continue
             v = w[1]; c = color(v); bw = max(2, abs(v) * unit); bx = x0 if v >= 0 else x0 - bw
-            o.append(f'<rect x="{bx:.1f}" y="{y - 6}" width="{bw:.1f}" height="12" rx="3" fill="{c}"/>')
-            o.append(f'<text x="{(x0 + bw if v >= 0 else x0) + 6:.1f}" y="{y + 4}" fill="{c}" font-family="var(--mono)" font-size="12" font-weight="800">{pct(v)}</text>')
+            o.append(f'<rect x="{bx:.1f}" y="{y - 7}" width="{bw:.1f}" height="14" fill="{c}"/>')
+            o.append(f'<text x="{(x0 + bw if v >= 0 else x0) + 6:.1f}" y="{y + 4}" fill="{c}" font-weight="700">{pct(v)}</text>')
     o.append("</svg>")
     return "\n".join(o)
 
 
 def kr_svg(f, opened, status):
-    """오른쪽 칸: 다음 날 코스피 시가. 같은 밤들의 아래 | 거의 그대로 | 위 빈도 막대(칸 폭 = 빈도),
-    시가가 오면 오늘 마커가 해당 칸 아래에. 범례는 칸 폭과 무관하게 고정 자리. 290×118."""
-    W, H = 290, 118
-    o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)">']
+    """낮 쪽: 다음 날 코스피 시가. 호가창처럼 위 / 거의 그대로 / 아래 세 행, 막대 길이 = 그 밤들의 비율.
+    시가가 오면 오늘이 속한 행을 칠하고 오른쪽 끝에 '오늘 +3.34%'. 320×100."""
+    W, H = 320, 100
+    o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
     if not f or f["n"] < 30:
-        o.append('<text x="0" y="13" fill="var(--muted)" font-size="11">다음 날 코스피 시가</text>')
-        o.append('<text x="0" y="62" fill="var(--muted)" font-size="12">비슷한 밤이 드물어 빈도는 생략</text>')
+        o.append('<text x="0" y="46" fill="var(--muted)">비슷한 밤이 드물어 빈도는 생략</text>')
         o.append("</svg>"); return "\n".join(o)
-    n = f["n"]; gap = 3; by0, by1 = 30, 56
-    o.append(f'<text x="0" y="13" fill="var(--muted)" font-size="11">다음 날 코스피 시가, 2021년부터 같은 밤 {n}번</text>')
-    x = 0.0; centers = {}
-    for z, c in (("down", "var(--down)"), ("flat", "var(--flat)"), ("up", "var(--up)")):
-        w = (W - 2 * gap) * f[z] / n
-        if w > 0:
-            o.append(f'<rect x="{x:.1f}" y="{by0}" width="{w:.1f}" height="{by1 - by0}" rx="6" fill="{c}"/>')
-            lab = f"{LABEL_Z[z]} {f[z] / n:.0%}"
-            if w >= len(lab) * 8 + 14:   # 칸에 들어갈 때만 안에 쓴다. 나머지는 아래 범례가 맡는다
-                o.append(f'<text x="{x + w / 2:.1f}" y="{(by0 + by1) / 2 + 4.5:.1f}" text-anchor="middle" fill="var(--paper)" font-size="12" font-weight="700">{lab}</text>')
-            centers[z] = (x + w / 2, c)
-        x += w + gap
-    for z, c, tx, an in (("down", "var(--down)", 0, "start"), ("flat", "var(--flat)", W / 2, "middle"), ("up", "var(--up)", W, "end")):
-        o.append(f'<text x="{tx:.1f}" y="{H - 8}" text-anchor="{an}" fill="{c}" font-size="11" font-weight="700">{LABEL_Z[z]} {f[z] / n:.0%}</text>')
-    if status == "pending" or opened is None:
-        o.append(f'<text x="{W / 2:.1f}" y="84" text-anchor="middle" fill="var(--muted)" font-size="12">{"오늘 시가는 09:00에" if status == "pending" else "오늘 코스피는 휴장"}</text>')
-    else:
-        z = zone_of(opened); cx, c = centers.get(z, (W / 2, "var(--ink)"))
-        tx = min(max(cx, 56), W - 56)
-        o.append(f'<path d="M{cx - 6:.1f},{by1 + 11} L{cx + 6:.1f},{by1 + 11} L{cx:.1f},{by1 + 3} Z" fill="{c}"/>')
-        o.append(f'<text x="{tx:.1f}" y="{by1 + 30}" text-anchor="middle"><tspan fill="var(--muted)" font-size="11">오늘 </tspan><tspan font-family="var(--mono)" font-size="15" font-weight="800" fill="{c}">{pct(opened)}</tspan></text>')
+    n = f["n"]; bx, bmax = 82, 120   # 막대 시작 x, 100% = 120px
+    z_today = zone_of(opened) if status == "filled" and opened is not None else None
+    for i, z in enumerate(("up", "flat", "down")):
+        y = 16 + 28 * i; share = f[z] / n; c = {"up": "var(--up)", "flat": "var(--flat)", "down": "var(--down)"}[z]
+        if z == z_today:
+            o.append(f'<rect x="0" y="{y - 13}" width="{W}" height="26" fill="{c}" opacity=".12"/>')
+        o.append(f'<text x="0" y="{y + 4}" fill="var(--ink)" font-weight="{700 if z == z_today else 500}">{LABEL_Z[z]}</text>')
+        o.append(f'<rect x="{bx}" y="{y - 7}" width="{max(2, share * bmax):.1f}" height="14" fill="{c}"/>')
+        o.append(f'<text x="{bx + max(2, share * bmax) + 6:.1f}" y="{y + 4}" fill="{c}" font-weight="700">{share:.0%}</text>')
+        if z == z_today:
+            o.append(f'<text x="{W}" y="{y + 4}" text-anchor="end" fill="var(--ink)"><tspan fill="var(--muted)">오늘 </tspan><tspan font-weight="800" font-size="14" fill="{c}">{pct(opened)}</tspan></text>')
+    if z_today is None:
+        o.append(f'<text x="{W}" y="{H - 2}" text-anchor="end" fill="var(--muted)" font-size="11">{"오늘 시가는 09:00에" if status == "pending" else "오늘 코스피는 휴장"}</text>')
     o.append("</svg>")
     return "\n".join(o)
-
-
-ARROW = '<svg class="arrow" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M5,2 L11,8 L5,14" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 
 
 def today_nodes(raw, D):
@@ -218,40 +205,27 @@ def page(D, prev, us, vix_lv, opened, f, status, prev_link):
 <meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
 <meta property="og:title" content="밤사이 코스피 {D:%m.%d}"><meta property="og:image" content="{SITE_URL}/relay.png"><meta property="og:description" content="{html.escape(sentence(f)) if f and f['n'] else '밤사이 흐름 한 장'}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
-/* 다크 홀로그래픽. 광원(인디고·틸)과 데이터 색(상승 빨강·하락 파랑)은 절대 섞지 않는다 —
-   섞으면 등락이 색으로 안 읽힌다. 광원은 카드 바탕, 데이터 색은 차트 안. */
-:root{{--paper:#0F1526;--ink:#EAEEF7;--muted:#98A3BC;--rule:rgba(255,255,255,.13);--band:rgba(255,255,255,.05);
-/* 상승 빨강·하락 파랑은 한국 시세 관례(아래 고지에도 명시). 다크에서 원래 값은 2.4~3.0:1이라 명도만 올렸다 */
---up:#FF6B5E;--down:#6E9BFF;--flat:#98A3BA;--night:#6C4DE0;--dawn:#1FC8B8;--void:#080B18;
---sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;--mono:"Azeret Mono",ui-monospace,Menlo,monospace}}
-*{{box-sizing:border-box}}html,body{{margin:0;background:var(--void);color:var(--ink);font-family:var(--sans);word-break:keep-all}}
-/* 스크린샷은 .sheet만 잘라낸다 — 광원을 body가 아니라 카드 안에 둬야 텔레그램 PNG에도 실린다 */
-.sheet{{position:relative;width:540px;max-width:100%;margin:0 auto;padding:22px 24px 18px;display:flex;flex-direction:column;
-background:radial-gradient(70% 24% at 20% -2%,rgba(108,77,224,.55) 0,transparent 62%),
-radial-gradient(58% 20% at 97% 3%,rgba(74,59,196,.45) 0,transparent 64%),
-radial-gradient(84% 26% at 50% 103%,rgba(31,200,184,.32) 0,transparent 64%),
-linear-gradient(180deg,#141438 0,#0A0D1E 46%,var(--void) 100%)}}
-/* 원래는 잉크 실선이었다. 다크에선 밝은 실선이 제목보다 세게 튀어 스펙트럼 한 줄로 바꿈 */
-header{{position:relative;display:flex;justify-content:space-between;align-items:baseline;padding-bottom:10px}}
-header::after{{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5px;background:linear-gradient(90deg,var(--night),var(--dawn),transparent)}}
-h1{{font-size:15px;font-weight:800;letter-spacing:-.01em;margin:0}}
-.stamp{{font-size:11px;color:var(--muted);text-align:right;line-height:1.5;white-space:nowrap}}.stamp b{{font-family:var(--mono);color:var(--ink);font-weight:700;font-size:11px}}
-/* 원인 → 결과: 카드에선 나란히(뉴욕 190px, 화살표, 코스피 나머지), 480px 아래선 위아래로 쌓고 화살표는 아래를 향한다 */
-.relay{{display:flex;align-items:center;gap:14px;margin:18px 0 0}}.ny{{flex:0 0 190px}}.kr{{flex:1;min-width:0}}
-.relay svg{{width:100%;height:auto;display:block}}.relay .arrow{{flex:none;width:16px;height:16px}}
-@media (max-width:480px){{.relay{{flex-direction:column;align-items:stretch;gap:8px}}.ny{{flex:none;max-width:260px}}.relay .arrow{{transform:rotate(90deg);margin-left:6px}}}}
-/* 제목 두 줄: 조건(작게, 뮤트) → 규칙(크게, 잉크). 오늘 시가는 그림의 마커가 말한다 */
-.cond{{font-size:14px;font-weight:600;color:var(--muted);margin:16px 0 3px;letter-spacing:-.005em}}
-.claim{{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:0;word-break:keep-all;font-variant-numeric:tabular-nums}}
-footer{{margin-top:22px;padding-top:12px;border-top:1px solid var(--rule);font-size:10.5px;color:var(--muted);line-height:1.55;display:flex;justify-content:space-between;gap:12px}}
-footer a{{color:var(--dawn)}}
-@media (max-width:480px){{.sheet{{padding:18px 14px 16px}}.lede{{font-size:15px}}header{{flex-direction:column;align-items:flex-start;gap:4px}}.stamp{{text-align:left}}}}
+/* 밤 / 낮 두 쪽. 왼쪽은 밤사이 뉴욕(어둡게), 오른쪽은 다음 날 코스피 시가(밝게). 경계가 곧 릴레이.
+   채도는 상승 빨강·하락 파랑뿐. 그라디언트·그림자·글로우·모노 폰트 없음. 폰트는 Pretendard 하나, 숫자는 tnum. */
+:root{{--sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}}
+*{{box-sizing:border-box}}html,body{{margin:0;background:#DDE1E6;font-family:var(--sans);word-break:keep-all;font-variant-numeric:tabular-nums}}
+.sheet{{width:540px;max-width:100%;margin:0 auto;display:grid;grid-template-columns:230px 1fr;border-radius:10px;overflow:hidden;background:#EEF0F3}}
+.night{{background:#15171D;color:#FFF;padding:20px 20px 22px;--ink:#FFF;--muted:#A7ADBA;--up:#FF6B5E;--down:#6E9BFF;--flat:#9AA3B5;--rule:rgba(255,255,255,.2)}}
+.day{{padding:20px 22px 22px;color:#10172A;--ink:#10172A;--muted:#6C7488;--up:#D9433B;--down:#2C5FD6;--flat:#6F7890;--rule:#CFD5DE}}
+.brand{{font-size:13px;font-weight:700;color:var(--muted);margin:0}}
+.stamp{{font-size:11.5px;color:var(--muted);text-align:right;margin:0}}.stamp b{{color:var(--ink)}}
+.cond{{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:28px 0 0}}
+.claim{{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:24px 0 0}}
+.lab{{font-size:11px;color:var(--muted);margin:26px 0 8px}}
+svg{{width:100%;height:auto;display:block}}
+.cap{{font-size:11px;color:var(--muted);margin:10px 0 0}}
+footer{{grid-column:1/-1;display:flex;justify-content:space-between;gap:12px;padding:12px 22px 14px;border-top:1px solid #CFD5DE;font-size:10.5px;color:#6C7488}}
+footer a{{color:#2C5FD6}}
+@media (max-width:480px){{.sheet{{grid-template-columns:1fr}}.cond{{margin-top:18px}}.claim{{margin-top:4px}}}}
 </style></head><body><div class="sheet">
-<header><h1>밤사이 코스피</h1><div class="stamp">{date_ko} <b>{"06:45" if status=="pending" else "09:06"}</b></div></header>
-{head_html(headline(f, opened, status))}
-<div class="relay"><div class="ny">{ny}</div>{ARROW}<div class="kr">{kr}</div></div>
+<section class="night"><p class="brand">밤사이 코스피</p>{head_html(headline(f, opened, status))[0]}<p class="lab">밤사이 뉴욕</p>{ny}</section>
+<section class="day"><p class="stamp">{date_ko} <b>{"06:45" if status=="pending" else "09:06"}</b></p>{head_html(headline(f, opened, status))[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 같은 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}</section>
 <footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}{SITE_URL.replace("https://","")}</span></footer>
 </div></body></html>"""
 

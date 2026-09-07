@@ -1,79 +1,39 @@
-/* 밤사이 코스피 — 다크 홀로그래픽.
-   배경 광원이 곧 시간축이다: 차트 세로축이 위 15:30(전일 마감) → 아래 09:00(오늘 시가)이므로
-   배경도 위가 깊은 밤(인디고), 아래가 새벽(틸)이다. 제목 그대로 밤을 건너오는 한 장.
-   광원 색(인디고·틸)과 데이터 색(상승 빨강·하락 파랑)은 절대 섞지 않는다 —
-   섞으면 등락이 색으로 안 읽힌다. 광원은 패널 밖, 데이터 색은 차트 안. */
-:root{--paper:#0F1526;--ink:#EAEEF7;--muted:#98A3BC;--rule:rgba(255,255,255,.13);--band:rgba(255,255,255,.05);
-/* 상승 빨강·하락 파랑은 한국 시세 관례(푸터 고지에도 명시). 다크에서 원래 값은 2.4~3.0:1이라 명도만 올렸다 */
---up:#FF6B5E;--down:#6E9BFF;--flat:#98A3BA;
---night:#6C4DE0;--dawn:#1FC8B8;--void:#080B18;
---glass:rgba(255,255,255,.055);--edge:rgba(255,255,255,.12);--lit:rgba(255,255,255,.3);
---sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;--mono:"Azeret Mono",ui-monospace,Menlo,monospace}
+/* 밤사이 코스피 미니앱. 카드는 밤 / 낮 두 쪽: 밤사이 뉴욕(어둡게) → 다음 날 코스피 시가(밝게). 경계가 곧 릴레이.
+   채도는 상승 빨강·하락 파랑뿐. 그라디언트·그림자·글로우·모노 폰트 없음. 폰트는 Pretendard 하나, 숫자는 tnum.
+   폰에선 두 쪽이 위아래로, 600px 이상에선 나란히. */
+:root{--sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+--page:#E6E9EE;--ink:#10172A;--muted:#6C7488;--up:#D9433B;--down:#2C5FD6;--flat:#6F7890;--rule:#CFD5DE}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* html body: TDS 청크가 뒤늦게 주입하는 body 전역 스타일보다 특이도 높게 */
-html body{margin:0;background:var(--void);color:var(--ink);font-family:var(--sans);word-break:keep-all;-webkit-text-size-adjust:100%;min-height:100dvh}
-/* 시간축 광원. 음수 z-index는 body 자기 배경에 덮이므로 쓰지 않고 레이어를 명시적으로 쌓는다.
-   애니메이션 없음 — 전체 화면이 계속 움직이는 배경은 전정기관 부담이다 */
-body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:
-radial-gradient(58% 26% at 22% -6%,var(--night) 0,transparent 58%),
-radial-gradient(46% 20% at 96% 2%,#4A3BC4 0,transparent 60%),
-radial-gradient(64% 24% at 46% 104%,var(--dawn) 0,transparent 62%),
-linear-gradient(180deg,#141438 0,#0A0D1E 44%,var(--void) 100%)}
-body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(8,11,24,.28) 0,rgba(8,11,24,0) 22%,rgba(8,11,24,.5) 74%,rgba(8,11,24,.8) 100%)}
-.app{position:relative;z-index:1;color:var(--ink);max-width:560px;margin:0 auto;padding:8px 16px calc(28px + env(safe-area-inset-bottom))}
+html body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);word-break:keep-all;-webkit-text-size-adjust:100%;font-variant-numeric:tabular-nums}
+.app{max-width:560px;margin:0 auto;padding:12px 16px calc(28px + env(safe-area-inset-bottom))}
 
-/* 릴레이 카드 — 유리. 뒤 광원이 밝아도 본문 대비가 흔들리지 않게 스모크 베이스를 깐다 */
-.sheet{position:relative;margin-top:6px;padding:14px 14px 16px;border-radius:22px;overflow:hidden;
-background:linear-gradient(168deg,var(--glass),rgba(255,255,255,.015)),linear-gradient(180deg,rgba(13,18,36,.74),rgba(8,11,24,.84));
-border:1px solid var(--edge);box-shadow:inset 0 1px 0 var(--lit),0 24px 56px -24px rgba(0,0,0,.9);
--webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%)}
-/* 스펙트럼 림 — 여분 엘리먼트 없이 테두리 1px만 무지갯빛으로 */
-.sheet::before{content:"";position:absolute;inset:0;border-radius:22px;padding:1px;pointer-events:none;opacity:.5;
-background:conic-gradient(from 200deg,var(--night),var(--dawn),rgba(255,255,255,.5),var(--night));
--webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
--webkit-mask-composite:xor;mask-composite:exclude}
-/* 헤더 구분선: 원래는 잉크 실선이었다. 다크에선 밝은 실선이 잉크보다 세게 튀어 스펙트럼 한 줄로 바꿈 */
-.stamp{position:relative;display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:var(--muted);padding:4px 2px 9px}
-.stamp::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5px;background:linear-gradient(90deg,var(--night),var(--dawn),transparent)}
-.stamp b{font-family:var(--mono);color:var(--ink);font-size:11px}
-.stamp .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink)}
-/* 제목 두 줄: 조건(작게, 뮤트) → 규칙(크게, 잉크). 오늘 시가는 그림의 마커가 말한다 */
-.cond{font-size:14px;font-weight:600;color:var(--muted);margin:14px 2px 3px}
-.claim{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:0 2px;word-break:keep-all;font-variant-numeric:tabular-nums}
-/* 원인 → 결과 두 칸. 폰에선 위아래로 쌓고 화살표는 아래를 향한다. 뉴욕 칸은 260px까지만(막대가 너무 커지지 않게) */
-.relay{position:relative;display:flex;flex-direction:column;gap:8px;margin:18px 2px 0}
-.ny{max-width:260px}.kr{width:100%}.relay svg{width:100%;height:auto;display:block}
-/* .relay svg{width:100%}보다 우선해야 한다. 세로 스택에선 flex-basis가 폭을 안 잡아줘 화살표가 화면 폭으로 커졌다 */
-.relay .arrow{width:16px;height:16px;flex:none;transform:rotate(90deg);margin-left:6px}
-@media (min-width:600px){.relay{flex-direction:row;align-items:center;gap:14px}.ny{flex:0 0 190px}.kr{flex:1;min-width:0}.relay .arrow{transform:none;margin:0}}
+.sheet{display:grid;grid-template-columns:1fr;border-radius:10px;overflow:hidden;background:#EEF0F3}
+@media (min-width:600px){.sheet{grid-template-columns:230px 1fr}}
+/* 두 쪽은 각자 토큰을 가진다. SVG가 var(--up) 등을 참조하므로 쪽마다 색이 따라온다 */
+.night{background:#15171D;color:#FFF;padding:18px 18px 20px;--ink:#FFF;--muted:#A7ADBA;--up:#FF6B5E;--down:#6E9BFF;--flat:#9AA3B5;--rule:rgba(255,255,255,.2)}
+.day{padding:18px 18px 20px;color:#10172A;--ink:#10172A;--muted:#6C7488;--up:#D9433B;--down:#2C5FD6;--flat:#6F7890;--rule:#CFD5DE}
+.brand{font-size:13px;font-weight:700;color:var(--muted);margin:0}
+.stamp{font-size:11.5px;color:var(--muted);margin:0;text-align:right}.stamp b{color:var(--ink)}
+.cond{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:16px 0 0}
+.claim{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:6px 0 0}
+.lab{font-size:11px;color:var(--muted);margin:22px 0 8px}
+.sheet svg{width:100%;height:auto;display:block}.ny{max-width:300px}
+.cap{font-size:11px;color:var(--muted);margin:10px 0 0}
+.note{font-size:12px;color:var(--muted);margin:10px 2px 0}
 
-.note{position:relative;z-index:1;font-size:12px;color:var(--muted);margin:10px 2px 0}
+.actions{margin:14px 0 6px}
+.btn-fallback{width:100%;height:52px;border:0;border-radius:8px;background:#15171D;color:#FFF;font:600 16px var(--sans)}
+/* TDS 버튼은 라운드 토큰이 주입되지 않아 반경 0으로 떨어진다. 구조 선택자로 감싼다 */
+.actions .tds-mobile-button{border-radius:8px;overflow:hidden}
+.actions .tds-mobile-button>div:first-of-type{background:#15171D}
 
-.actions{position:relative;z-index:1;margin:18px 0 6px}
-.btn-fallback{width:100%;height:56px;border:0;border-radius:18px;background:linear-gradient(140deg,var(--night),#3E4BD8);color:#fff;font:600 17px var(--sans);box-shadow:0 10px 30px -12px var(--night)}
-/* TDS는 다크 모드가 없다(패키지에 colorMode 없음). color="dark"는 회색 #4E5968이고
-   라운드 토큰이 주입 안 돼 반경 0으로 떨어진다 — 다크 배경에서 밝은 사각형으로 튄다.
-   이모션 해시 클래스는 빌드마다 바뀌므로 구조로 잡는다. overflow:hidden이 절대배치된
-   표면과 리플을 둥근 모양으로 같이 클립해준다 */
-.actions .tds-mobile-button{border-radius:18px;overflow:hidden;box-shadow:0 10px 30px -12px var(--night)}
-.actions .tds-mobile-button>div:first-of-type{background:linear-gradient(140deg,var(--night),#3E4BD8)}
-
-.past{position:relative;z-index:1}
-.past h2{font-size:13px;color:var(--muted);font-weight:600;margin:22px 0 10px;letter-spacing:.02em}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.chips::-webkit-scrollbar{display:none}.chips::after{content:"";flex:0 0 8px}
-.chip{flex:0 0 auto;height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--edge);background:var(--glass);color:var(--muted);font:600 13px var(--mono);box-shadow:inset 0 1px 0 rgba(255,255,255,.14);transition:transform .12s cubic-bezier(.34,1.4,.64,1),color .15s ease,border-color .15s ease}
-.chip:active{transform:scale(.95)}
-.chip.on{color:var(--ink);border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.11);box-shadow:inset 0 1px 0 var(--lit),0 0 22px -8px var(--dawn)}
-.chip:disabled{opacity:.55}
-.fine{position:relative;z-index:1;font-size:11.5px;color:var(--muted);margin:22px 2px 0}
-.ad-banner{position:relative;z-index:1;margin-top:20px;border-radius:14px;overflow:hidden}.ad-banner:empty{display:none}
-:focus-visible{outline:2px solid var(--dawn);outline-offset:2px;border-radius:6px}
-
+.past h2{font-size:12px;color:var(--muted);font-weight:600;margin:20px 0 8px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 0 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.chips::-webkit-scrollbar{display:none}.chips::after{content:"";flex:0 0 8px}
+.chip{flex:0 0 auto;height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--rule);background:#FFF;color:var(--ink);font:600 13px var(--sans)}
+.chip.on{background:#15171D;color:#FFF;border-color:#15171D}
+.chip:disabled{opacity:.5}
+.fine{font-size:11px;color:var(--muted);margin:18px 2px 0}
+.ad-banner{margin-top:18px;border-radius:8px;overflow:hidden}.ad-banner:empty{display:none}
+:focus-visible{outline:2px solid var(--down);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-/* 투명도 감소: 블러는 비용만 남고 의미가 없어지므로 끄고 표면을 불투명으로 */
-@media (prefers-reduced-transparency:reduce){
-body::before{background:linear-gradient(180deg,#121634,var(--void))!important}
-.sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#141A2E!important}
-.sheet::before{display:none!important}
-.chip{background:#161C30!important}}
-@media (prefers-contrast:more){:root{--muted:#C2CBDE;--edge:rgba(255,255,255,.4);--rule:rgba(255,255,255,.34)}}
