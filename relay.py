@@ -119,15 +119,16 @@ def ny_svg(us):
     if not vals:
         o.append('<text x="0" y="46" fill="var(--muted)">뉴욕 휴장</text>')
     else:
-        x0, unit = 76, 100 / max(0.005, max(abs(v) for v in vals))   # 0선 x, 최대 막대 100px
+        # 호가창처럼 길이 = 크기, 색 = 방향. 음수를 왼쪽으로 뻗게 하면 라벨을 침범한다(9/7 카드에서 확인)
+        x0, unit = 76, 100 / max(0.005, max(abs(v) for v in vals))   # 막대 시작 x, 최대 막대 100px
         o.append(f'<line x1="{x0}" y1="2" x2="{x0}" y2="{H - 2}" stroke="var(--rule)" stroke-width="1"/>')
         for i, k in enumerate(US):
             w = us.get(k); y = 16 + 26 * i
             o.append(f'<text x="{x0 - 8}" y="{y + 4}" text-anchor="end" fill="var(--muted)">{LABEL[k]}</text>')
             if not w: continue
-            v = w[1]; c = color(v); bw = max(2, abs(v) * unit); bx = x0 if v >= 0 else x0 - bw
-            o.append(f'<rect x="{bx:.1f}" y="{y - 7}" width="{bw:.1f}" height="14" fill="{c}"/>')
-            o.append(f'<text x="{(x0 + bw if v >= 0 else x0) + 6:.1f}" y="{y + 4}" fill="{c}" font-weight="700">{pct(v)}</text>')
+            v = w[1]; c = color(v); bw = max(2, abs(v) * unit)
+            o.append(f'<rect x="{x0}" y="{y - 7}" width="{bw:.1f}" height="14" fill="{c}"/>')
+            o.append(f'<text x="{x0 + bw + 6:.1f}" y="{y + 4}" fill="{c}" font-weight="700">{pct(v)}</text>')
     o.append("</svg>")
     return "\n".join(o)
 
