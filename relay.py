@@ -127,7 +127,8 @@ def freq_svg(f, opened, status):
         return ""
     W, BH = 540, 30
     n = f["n"]; gap = 3
-    o = [f'<svg viewBox="0 0 {W} 78" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)">']
+    # 좁은 칸의 라벨은 막대 위(y<0)에 놓이므로 viewBox를 위로 14 넓힌다. overflow에 기대지 않는다
+    o = [f'<svg viewBox="0 -14 {W} 92" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)">']
     x = 0.0
     centers = {}
     for z, c in (("down", "var(--down)"), ("flat", "var(--flat)"), ("up", "var(--up)")):
