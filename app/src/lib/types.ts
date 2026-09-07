@@ -1,5 +1,8 @@
 export type Pair = [number, number] | null
 
+// index.json 항목: 날짜 + 그날 시가 방향(칩의 색 점)
+export interface DayRef { d: string; z: 'up' | 'flat' | 'down' | null }
+
 export interface Freq { bin: string; n: number; up: number; flat: number; down: number; years: number }
 
 // 제목 두 줄. cond = 조건('뉴욕이 크게 오른 밤'), claim = 규칙('다음 날 코스피는 10번 중 8번 위로 열렸다')
@@ -7,11 +10,13 @@ export interface Head { cond: string; claim: string; zone: 'up' | 'flat' | 'down
 
 export interface RelayDay {
   date: string
-  status: 'pending' | 'filled' | 'closed'
+  status: 'pending' | 'filled' | 'closed' | 'done'   // done = 15:40 마감 반영
   prev: { date: string; kospi: number; kosdaq: number | null }
   us: { SOXX: Pair; QQQ: Pair; SPY: Pair }
   vix: Pair
   open: number | null
+  close?: number | null
+  tail?: string | null         // 마감 박자 한 줄
   freq: Freq | null
   head?: Head | null           // 없으면 미표시
   sentence: string | null

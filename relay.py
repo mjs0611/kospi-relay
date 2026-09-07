@@ -105,6 +105,14 @@ def sentence(f):
     return f"{h['cond']}. {h['claim']}" if h["claim"] else h["cond"]
 
 
+def tail_text(status, closed_pct, open_h):
+    """15:40 마감 박자. 오늘을 닫고 오늘 밤을 예고한다. 일별 종가만 쓴다(인트라데이 아님)."""
+    if status != "done" or closed_pct is None:
+        return None
+    hm = f"{int(open_h) % 24:02d}:{int(round((open_h % 1) * 60)):02d}"
+    return f"오늘 코스피는 {pct(closed_pct)}로 마감했어요. 뉴욕은 {hm}에 열려요"
+
+
 def head_html(h):
     """(밤 쪽 조건, 낮 쪽 규칙) 두 조각. 조건은 밤에, 규칙은 낮에 산다."""
     e = html.escape
@@ -143,7 +151,7 @@ def kr_svg(f, opened, status):
         o.append('<text x="0" y="46" fill="var(--muted)">비슷한 밤이 적어 통계는 안 냈어요</text>')
         o.append("</svg>"); return "\n".join(o)
     n = f["n"]; bx, bmax = 82, 120   # 막대 시작 x, 100% = 120px
-    z_today = zone_of(opened) if status == "filled" and opened is not None else None
+    z_today = zone_of(opened) if status in ("filled", "done") and opened is not None else None
     for i, z in enumerate(("up", "flat", "down")):
         y = 16 + 28 * i; share = f[z] / n; c = {"up": "var(--up)", "flat": "var(--flat)", "down": "var(--down)"}[z]
         if z == z_today:
@@ -169,7 +177,8 @@ def today_nodes(raw, D):
     vwin = raw["VIX"][(raw["VIX"].index >= P) & (raw["VIX"].index <= D - pd.Timedelta(days=1))]
     vix_lv = (raw["VIX"][raw["VIX"].index < P].Close.iloc[-1], vwin.Close.iloc[-1]) if vix else None
     opened = K.Open[D] / K.Close[P] - 1 if D in K.index else None
-    return prev, us, vix_lv, opened
+    closed_pct = K.Close[D] / K.Close[P] - 1 if D in K.index else None   # 장중엔 현재가. close 단계에서만 믿는다
+    return prev, us, vix_lv, opened, closed_pct
 
 
 # ---------- render ----------
@@ -198,8 +207,9 @@ def pending_text(status):
     return "09:00에 채워진다" if status == "pending" else ("오늘 휴장" if status == "closed" else "")
 
 
-def page(D, prev, us, vix_lv, opened, f, status, prev_link):
+def page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None):
     date_ko = f"{D.month}월 {D.day}일 {'월화수목금토일'[D.weekday()]}요일"
+    stamp_t = {"pending": "06:45", "done": "15:40"}.get(status, "09:06")   # f-string 안에 dict 리터럴은 못 쓴다
     pending = pending_text(status)
     ny, kr = ny_svg(us), kr_svg(f, opened, status)
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -222,12 +232,13 @@ def page(D, prev, us, vix_lv, opened, f, status, prev_link):
 .lab{{font-size:11px;color:var(--muted);margin:26px 0 8px}}
 svg{{width:100%;height:auto;display:block}}
 .cap{{font-size:11px;color:var(--muted);margin:10px 0 0}}
+.tail{{font-size:13px;font-weight:600;line-height:1.4;margin:16px 0 0}}
 footer{{grid-column:1/-1;display:flex;justify-content:space-between;gap:12px;padding:12px 22px 14px;border-top:1px solid #CFD5DE;font-size:10.5px;color:#6C7488}}
 footer a{{color:#2C5FD6}}
 @media (max-width:480px){{.sheet{{grid-template-columns:1fr}}.cond{{margin-top:18px}}.claim{{margin-top:4px}}}}
 </style></head><body><div class="sheet">
 <section class="night"><p class="brand">밤사이 코스피</p>{head_html(headline(f, opened, status))[0]}<p class="lab">밤사이 뉴욕</p>{ny}</section>
-<section class="day"><p class="stamp">{date_ko} <b>{"06:45" if status=="pending" else "09:06"}</b></p>{head_html(headline(f, opened, status))[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}</section>
+<section class="day"><p class="stamp">{date_ko} <b>{stamp_t}</b></p>{head_html(headline(f, opened, status))[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}{f'<p class="tail">{html.escape(tail)}</p>' if tail else ''}</section>
 <footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}{SITE_URL.replace("https://","")}</span></footer>
 </div></body></html>"""
 
@@ -237,44 +248,58 @@ def build(phase):
     now = dt.datetime.now(KST); D = pd.Timestamp(os.environ.get("RELAY_DATE") or now.date())  # RELAY_DATE=YYYY-MM-DD 로컬 재현용
     raw = fetch()
     hist = align(raw)
-    prev, us, vix_lv, opened = today_nodes(raw, D)
+    prev, us, vix_lv, opened, closed_pct = today_nodes(raw, D)
     if phase == "morning":
         opened = None            # 아침엔 시가 노드 비움 (과거 날짜 재현 시에도)
+    if phase != "close":
+        closed_pct = None        # 장중 야후 일봉의 Close는 현재가. 마감 단계에서만 쓴다
     f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1])) if us.get("SPY") and us.get("SOXX") else None
     # open 단계에 시가가 없어도 휴장으로 단정하지 않는다 — 야후 반영이 09:09보다 늦을 수 있다.
     # 재시도 크론이 뒤따르고, 마지막 크론(RELAY_FINAL=1)에서만 휴장으로 확정한다.
     if phase == "morning": status = "pending"
-    elif opened is not None: status = "filled"
-    else: status = "closed" if os.environ.get("RELAY_FINAL") else "pending"
+    elif opened is None: status = "closed" if os.environ.get("RELAY_FINAL") else "pending"
+    elif closed_pct is not None: status = "done"     # 15:40 마감 반영
+    else: status = "filled"
+    tail = tail_text(status, closed_pct, us_hours(D)[0])
     prev_link = f"{prev['date']:%Y-%m-%d}" if (SITE / f"{prev['date']:%Y-%m-%d}").exists() else None
-    htm = page(D, prev, us, vix_lv, opened, f, status, prev_link)
+    htm = page(D, prev, us, vix_lv, opened, f, status, prev_link, tail)
     day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
     (day / "index.html").write_text(htm.replace('href="../', 'href="../'), encoding="utf-8")
     (SITE / "index.html").write_text(htm.replace('href="../', 'href="./'), encoding="utf-8")
     payload = json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
-        "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "freq": f,
+        "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
         "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
         "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float)
     (SITE / "latest.json").write_text(payload, encoding="utf-8")
     (SITE / "days").mkdir(exist_ok=True); (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(payload, encoding="utf-8")
-    (SITE / "index.json").write_text(json.dumps(sorted((p.stem for p in (SITE / "days").glob("*.json")), reverse=True)), encoding="utf-8")
+    write_index()
     (SITE / ".nojekyll").touch()
     screenshot(SITE / "index.html", SITE / "relay.png")
     print(f"built {D.date()} {status} freq={f}")
 
 
+def write_index():
+    """index.json = [{d: 날짜, z: 그날 시가 방향}] 최신순. 미니앱 '지난 밤들' 칩이 색 점으로 쓴다."""
+    rows = []
+    for q in sorted((SITE / "days").glob("*.json"), reverse=True):
+        try: z = zone_of(json.loads(q.read_text(encoding="utf-8")).get("open"))
+        except Exception: z = None
+        rows.append({"d": q.stem, "z": z})
+    (SITE / "index.json").write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+
+
 def backfill(n):
     raw = fetch(); hist = align(raw); K = raw["KOSPI"]
     for D in K.index[-n:]:
-        prev, us, vix_lv, opened = today_nodes(raw, D)
+        prev, us, vix_lv, opened, closed_pct = today_nodes(raw, D)
         f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1])) if us.get("SPY") and us.get("SOXX") else None
         day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
-        (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, "filled", None), encoding="utf-8")
+        (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, "done", None, None), encoding="utf-8")
         (SITE / "days").mkdir(exist_ok=True)
-        (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": "filled", "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
-            "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "freq": f,
-            "head": headline(f, opened, "filled"), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, "filled")}, ensure_ascii=False, default=float), encoding="utf-8")
-    (SITE / "index.json").write_text(json.dumps(sorted((p.stem for p in (SITE / "days").glob("*.json")), reverse=True)), encoding="utf-8")
+        (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": "done", "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
+            "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": None, "freq": f,
+            "head": headline(f, opened, "done"), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, "done")}, ensure_ascii=False, default=float), encoding="utf-8")
+    write_index()
     print("backfilled", n)
 
 
@@ -298,5 +323,5 @@ def selfcheck():
 
 
 if __name__ == "__main__":
-    {"morning": lambda: build("morning"), "open": lambda: build("open"), "selfcheck": selfcheck,
+    {"morning": lambda: build("morning"), "open": lambda: build("open"), "close": lambda: build("close"), "selfcheck": selfcheck,
      "backfill": lambda: backfill(int(sys.argv[2]) if len(sys.argv) > 2 else 20)}[sys.argv[1]]()

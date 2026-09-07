@@ -4,7 +4,7 @@ import ast, pathlib, html
 
 src = pathlib.Path(__file__).with_name("relay.py").read_text()
 tree = ast.parse(src)
-keep = {"FLAT", "US", "LABEL", "NIGHT", "WENT", "LABEL_Z", "tenths", "pct", "color", "zone_of", "headline", "head_html", "sentence", "ny_svg", "kr_svg"}
+keep = {"FLAT", "US", "LABEL", "NIGHT", "WENT", "LABEL_Z", "tenths", "pct", "color", "zone_of", "headline", "head_html", "sentence", "ny_svg", "kr_svg", "tail_text"}
 mod = ast.Module(body=[n for n in tree.body
                        if (isinstance(n, ast.FunctionDef) and n.name in keep)
                        or (isinstance(n, ast.Assign) and any(getattr(t, "id", None) in keep for t in n.targets))], type_ignores=[])
@@ -29,4 +29,9 @@ kr = kr_svg(fu, 0.0334, "filled"); assert kr.count("<rect") == 4 and "상승" in
 kr = kr_svg(fu, None, "pending");  assert kr.count("<rect") == 3 and "9시에" in kr and "+3.34%" not in kr
 assert "통계는 안 냈어요" in kr_svg(None, None, "pending")
 cond, claim = ns["head_html"](headline(fu, None, "pending")); assert cond.startswith('<p class="cond">') and claim.startswith('<p class="claim">')
+tail = ns["tail_text"]
+assert tail("done", 0.0124, 22.5) == "오늘 코스피는 +1.24%로 마감했어요. 뉴욕은 22:30에 열려요"
+assert tail("done", -0.005, 23.5) == "오늘 코스피는 -0.50%로 마감했어요. 뉴욕은 23:30에 열려요"
+assert tail("filled", 0.01, 22.5) is None and tail("done", None, 22.5) is None
+kr = kr_svg(fu, 0.0334, "done"); assert "오늘 " in kr and "+3.34%" in kr   # done도 마커
 print("headline ok")

@@ -8,9 +8,11 @@ on:
     - cron: "9 0 * * 1-5"     # 09:09 KST 월–금 open
     - cron: "40 0 * * 1-5"    # 09:40 KST 월–금 open 재시도 (야후 시가 반영 지연 대비)
     - cron: "30 1 * * 1-5"    # 10:30 KST 월–금 open 최종 — 이때도 시가 없으면 휴장으로 확정
+    - cron: "40 6 * * 1-5"    # 15:40 KST 월–금 close (오늘 마감 반영, 저녁 박자)
+    - cron: "10 7 * * 1-5"    # 16:10 KST 월–금 close 재시도 (야후 종가 반영 지연 대비)
   workflow_dispatch:
     inputs:
-      phase: { description: morning | open | backfill, default: morning }
+      phase: { description: morning | open | close | backfill, default: morning }
       date: { description: "YYYY-MM-DD (재현용, 비우면 오늘)", default: "" }
 permissions: { contents: write }
 concurrency: relay
@@ -29,7 +31,7 @@ jobs:
         run: |
           S="${{ github.event.schedule }}"
           P="${{ github.event.inputs.phase }}"
-          if [ -z "$P" ]; then case "$S" in *" 0 * * 1-5"|*" 1 * * 1-5") P=open;; *) P=morning;; esac; fi
+          if [ -z "$P" ]; then case "$S" in *" 6 * * 1-5"|*" 7 * * 1-5") P=close;; *" 0 * * 1-5"|*" 1 * * 1-5") P=open;; *) P=morning;; esac; fi
           echo "PHASE=$P" >> $GITHUB_ENV
           if [ "$S" = "30 1 * * 1-5" ]; then echo "RELAY_FINAL=1" >> $GITHUB_ENV; fi
       - run: rm -rf site/.git && python relay.py "$PHASE"

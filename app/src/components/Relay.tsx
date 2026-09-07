@@ -17,11 +17,12 @@ export default function Relay({ day }: { day: RelayDay }) {
         {day.ny && <div className="ny" dangerouslySetInnerHTML={{ __html: day.ny }} />}
       </section>
       <section className="day">
-        <p className="stamp">{dateKo(day.date)} <b>{day.status === 'pending' ? '06:45' : '09:06'}</b></p>
+        <p className="stamp">{dateKo(day.date)} <b>{day.status === 'pending' ? '06:45' : day.status === 'done' ? '15:40' : '09:06'}</b></p>
         {day.head && <p className="claim">{day.head.claim || '오늘 코스피 시가'}</p>}
         <p className="lab">다음 날 코스피 시가</p>
         {day.kr && <div className="kr" dangerouslySetInnerHTML={{ __html: day.kr }} />}
         {f && f.n >= 30 && <p className="cap">2021년부터 비슷한 밤 {f.n}번</p>}
+        {day.tail && <p className="tail">{day.tail}</p>}
       </section>
     </article>
   )

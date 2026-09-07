@@ -1,5 +1,5 @@
 import seed from '../seed.json'
-import type { RelayDay } from './types'
+import type { DayRef, RelayDay } from './types'
 
 export const BASE = 'https://mjs0611.github.io/kospi-relay'
 const KEY = 'relay:latest:v1'
@@ -26,7 +26,9 @@ export async function fetchLatest(): Promise<RelayDay> {
 }
 
 export const fetchDay = (date: string) => getJson<RelayDay>(`days/${date}.json`)
-export const fetchIndex = () => getJson<string[]>('index.json')
+// 옛 index.json은 날짜 문자열 배열이었다. 둘 다 받는다
+export const fetchIndex = async (): Promise<DayRef[]> =>
+  (await getJson<(string | DayRef)[]>('index.json')).map((x) => (typeof x === 'string' ? { d: x, z: null } : x))
 
 // 딥링크 /d/YYYY-MM-DD → 해당 날짜. 후행 슬래시 정규화 (검수 스킴 게이트)
 export function dateFromPath(): string | null {

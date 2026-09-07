@@ -3,7 +3,7 @@ import Relay from './components/Relay'
 import BannerAd from './components/BannerAd'
 import { cachedLatest, dateFromPath, fetchDay, fetchIndex, fetchLatest } from './lib/data'
 import { haptic, shareRelay } from './lib/ait'
-import type { RelayDay } from './lib/types'
+import type { DayRef, RelayDay } from './lib/types'
 
 const TdsButton = lazy(() => import('./components/TdsButton'))
 
@@ -19,7 +19,7 @@ function fmt(d: string) { return `${Number(d.slice(5, 7))}/${Number(d.slice(8, 1
 export default function App() {
   const [latest, setLatest] = useState<RelayDay>(() => cachedLatest())
   const [day, setDay] = useState<RelayDay | null>(null)          // 지난 날짜 선택 시
-  const [dates, setDates] = useState<string[]>([])
+  const [dates, setDates] = useState<DayRef[]>([])
   const [stale, setStale] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const preloaded = useRef(false)
@@ -64,8 +64,9 @@ export default function App() {
         <section className="past">
           <h2>지난 밤들</h2>
           <div className="chips">
-            {dates.slice(0, 15).map((d) => (
-              <button key={d} className={`chip ${d === shown.date ? 'on' : ''}`} onClick={() => void pick(d)} disabled={busy === d}>
+            {dates.slice(0, 15).map(({ d, z }) => (
+              <button key={d} className={`chip ${d === shown.date ? 'on' : ''} ${z ?? ''}`} onClick={() => void pick(d)} disabled={busy === d}>
+                {z && <i className="dot" aria-hidden="true" />}
                 {busy === d ? '…' : fmt(d)}
               </button>
             ))}
