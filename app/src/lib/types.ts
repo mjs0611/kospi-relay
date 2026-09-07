@@ -13,7 +13,8 @@ export interface RelayDay {
   vix: Pair
   open: number | null
   freq: Freq | null
-  head?: Head | null           // 2026-09-07 이후 JSON에만 있음 — 없으면 미표시
+  head?: Head | null           // 2026-09-07 이후 JSON에만 있음. 없으면 미표시
+  bar?: string                 // 빈도 막대 SVG. 카드의 주장. 없으면 미표시
   sentence: string | null
   svg: string
   built_at?: string
