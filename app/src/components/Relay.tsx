@@ -21,7 +21,7 @@ export default function Relay({ day }: { day: RelayDay }) {
         {day.head && <p className="claim">{day.head.claim || '오늘 코스피 시가'}</p>}
         <p className="lab">다음 날 코스피 시가</p>
         {day.kr && <div className="kr" dangerouslySetInnerHTML={{ __html: day.kr }} />}
-        {f && f.n >= 30 && <p className="cap">2021년부터 같은 밤 {f.n}번</p>}
+        {f && f.n >= 30 && <p className="cap">2021년부터 비슷한 밤 {f.n}번</p>}
       </section>
     </article>
   )

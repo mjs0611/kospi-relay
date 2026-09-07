@@ -70,10 +70,11 @@ def frequency(hist, s):
             "years": round((hist.index[-1] - hist.index[0]).days / 365.25, 1)}
 
 
-NIGHT = {"강한 상승": "뉴욕이 크게 오른 밤", "상승": "뉴욕이 오른 밤", "보합": "뉴욕이 조용했던 밤",
-         "하락": "뉴욕이 내린 밤", "강한 하락": "뉴욕이 크게 내린 밤"}      # 조건을 말로 정의한다
-WENT = {"up": "위로", "down": "아래로", "flat": "거의 그대로"}              # 다음 날 시가가 간 곳
-LABEL_Z = {"up": "위", "down": "아래", "flat": "거의 그대로"}              # 막대 칸 이름
+# 말투: 해요체, 짧게, 구어. fx-signal("환전하기 좋아요")과 같은 목소리. 신문체(열렸다)·합쇼체(열렸습니다) 금지
+NIGHT = {"강한 상승": "지난밤 뉴욕이 크게 올랐어요", "상승": "지난밤 뉴욕이 조금 올랐어요", "보합": "지난밤 뉴욕은 잠잠했어요",
+         "하락": "지난밤 뉴욕이 조금 내렸어요", "강한 하락": "지난밤 뉴욕이 크게 내렸어요"}   # 조건을 말로
+WENT = {"up": "올라서 시작했어요", "down": "내려서 시작했어요", "flat": "거의 그대로 시작했어요"}   # 다음 날 시가
+LABEL_Z = {"up": "상승", "down": "하락", "flat": "보합"}                                  # 행 이름은 증권 앱 표준어
 
 
 def tenths(share):
@@ -87,15 +88,15 @@ def zone_of(x):
 
 
 def headline(f, opened, status):
-    """카드 제목 두 줄. cond = 조건('뉴욕이 크게 오른 밤'), claim = 규칙('다음 날 코스피는 10번 중 8번 위로 열렸다').
-    오늘 시가는 제목이 아니라 그림의 마커가 말한다. 예측 아님, 과거 빈도 서술만."""
+    """카드 제목 두 줄. cond = 조건('지난밤 뉴욕이 크게 올랐어요'), claim = 규칙('코스피는 10번 중 8번 올라서 시작했어요').
+    오늘 시가는 제목이 아니라 그림의 마커가 말한다. 예측 아님, 과거 빈도 서술만. 말투는 해요체."""
     if not f:
-        return {"cond": "밤사이 뉴욕은 쉬었다", "claim": "", "zone": None}
+        return {"cond": "지난밤 뉴욕은 휴장이었어요", "claim": "", "zone": None}
     cond = NIGHT[f["bin"]]
     if f["n"] < 30:
-        return {"cond": cond, "claim": f"비슷한 밤이 {int(f['years'])}년간 {f['n']}번뿐이라 빈도는 생략", "zone": zone_of(opened)}
+        return {"cond": cond, "claim": f"비슷한 밤이 {f['n']}번뿐이라 통계는 안 냈어요", "zone": zone_of(opened)}
     maj = max(("up", "down", "flat"), key=lambda z: f[z])
-    return {"cond": cond, "claim": f"다음 날 코스피는 {tenths(f[maj] / f['n'])} {WENT[maj]} 열렸다", "zone": maj}
+    return {"cond": cond, "claim": f"코스피는 {tenths(f[maj] / f['n'])} {WENT[maj]}", "zone": maj}
 
 
 def sentence(f):
@@ -117,7 +118,7 @@ def ny_svg(us):
     o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
     vals = [us[k][1] for k in US if us.get(k)]
     if not vals:
-        o.append('<text x="0" y="46" fill="var(--muted)">뉴욕 휴장</text>')
+        o.append('<text x="0" y="46" fill="var(--muted)">뉴욕은 휴장이었어요</text>')
     else:
         # 호가창처럼 길이 = 크기, 색 = 방향. 음수를 왼쪽으로 뻗게 하면 라벨을 침범한다(9/7 카드에서 확인)
         x0, unit = 76, 100 / max(0.005, max(abs(v) for v in vals))   # 막대 시작 x, 최대 막대 100px
@@ -139,7 +140,7 @@ def kr_svg(f, opened, status):
     W, H = 320, 100
     o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
     if not f or f["n"] < 30:
-        o.append('<text x="0" y="46" fill="var(--muted)">비슷한 밤이 드물어 빈도는 생략</text>')
+        o.append('<text x="0" y="46" fill="var(--muted)">비슷한 밤이 적어 통계는 안 냈어요</text>')
         o.append("</svg>"); return "\n".join(o)
     n = f["n"]; bx, bmax = 82, 120   # 막대 시작 x, 100% = 120px
     z_today = zone_of(opened) if status == "filled" and opened is not None else None
@@ -153,7 +154,7 @@ def kr_svg(f, opened, status):
         if z == z_today:
             o.append(f'<text x="{W}" y="{y + 4}" text-anchor="end" fill="var(--ink)"><tspan fill="var(--muted)">오늘 </tspan><tspan font-weight="800" font-size="14" fill="{c}">{pct(opened)}</tspan></text>')
     if z_today is None:
-        o.append(f'<text x="{W}" y="{H - 2}" text-anchor="end" fill="var(--muted)" font-size="11">{"오늘 시가는 09:00에" if status == "pending" else "오늘 코스피는 휴장"}</text>')
+        o.append(f'<text x="{W}" y="{H - 2}" text-anchor="end" fill="var(--muted)" font-size="11">{"오늘 시가는 9시에 나와요" if status == "pending" else "오늘은 휴장이에요"}</text>')
     o.append("</svg>")
     return "\n".join(o)
 
@@ -226,7 +227,7 @@ footer a{{color:#2C5FD6}}
 @media (max-width:480px){{.sheet{{grid-template-columns:1fr}}.cond{{margin-top:18px}}.claim{{margin-top:4px}}}}
 </style></head><body><div class="sheet">
 <section class="night"><p class="brand">밤사이 코스피</p>{head_html(headline(f, opened, status))[0]}<p class="lab">밤사이 뉴욕</p>{ny}</section>
-<section class="day"><p class="stamp">{date_ko} <b>{"06:45" if status=="pending" else "09:06"}</b></p>{head_html(headline(f, opened, status))[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 같은 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}</section>
+<section class="day"><p class="stamp">{date_ko} <b>{"06:45" if status=="pending" else "09:06"}</b></p>{head_html(headline(f, opened, status))[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}</section>
 <footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}{SITE_URL.replace("https://","")}</span></footer>
 </div></body></html>"""
 
@@ -303,7 +304,7 @@ def selfcheck():
     assert hist.loc["2025-04-10", "gap"] > 0.04                                      # 유예 발표 반등
     f = frequency(hist, 0.006); assert f["up"] + f["flat"] + f["down"] == f["n"] and f["up"] / f["n"] > 0.8, f
     tot = sum(frequency(hist, (lo + min(hi, 0.02)) / 2)["n"] for lo, hi, _ in BINS); assert tot == len(hist), (tot, len(hist))
-    assert "위로" in sentence(f)
+    assert "올라서" in sentence(f)
     print("selfcheck ok", len(hist), f)
 
 

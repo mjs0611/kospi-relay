@@ -14,19 +14,19 @@ headline, zone_of, sentence, ny_svg, kr_svg, FLAT = ns["headline"], ns["zone_of"
 f = {"n": 541, "up": 174, "flat": 277, "down": 90, "bin": "보합", "years": 5.6}
 fu = {"n": 277, "up": 222, "flat": 45, "down": 10, "bin": "강한 상승", "years": 5.6}
 us = {"SOXX": (0.01, 0.0352, 1), "QQQ": (0.0, 0.0018, 1), "SPY": (0.0, -0.0039, 1)}
-h = headline(fu, None, "pending");  assert h == {"cond": "뉴욕이 크게 오른 밤", "claim": "다음 날 코스피는 10번 중 8번 위로 열렸다", "zone": "up"}, h
-h = headline(f, 0.0276, "filled");  assert h["cond"] == "뉴욕이 조용했던 밤" and h["claim"] == "다음 날 코스피는 10번 중 5번 거의 그대로 열렸다", h
-h = headline({"n": 10, "up": 5, "flat": 3, "down": 2, "bin": "상승", "years": 5.6}, None, "pending"); assert "10번뿐" in h["claim"], h
-h = headline(None, None, "pending"); assert h["cond"] == "밤사이 뉴욕은 쉬었다" and h["claim"] == ""
-assert sentence(fu) == "뉴욕이 크게 오른 밤. 다음 날 코스피는 10번 중 8번 위로 열렸다"
-assert "위로" in sentence(fu)                                   # relay.py selfcheck와 같은 계약
+h = headline(fu, None, "pending");  assert h == {"cond": "지난밤 뉴욕이 크게 올랐어요", "claim": "코스피는 10번 중 8번 올라서 시작했어요", "zone": "up"}, h
+h = headline(f, 0.0276, "filled");  assert h["cond"] == "지난밤 뉴욕은 잠잠했어요" and h["claim"] == "코스피는 10번 중 5번 거의 그대로 시작했어요", h
+h = headline({"n": 10, "up": 5, "flat": 3, "down": 2, "bin": "상승", "years": 5.6}, None, "pending"); assert h["claim"] == "비슷한 밤이 10번뿐이라 통계는 안 냈어요", h
+h = headline(None, None, "pending"); assert h["cond"] == "지난밤 뉴욕은 휴장이었어요" and h["claim"] == ""
+assert sentence(fu) == "지난밤 뉴욕이 크게 올랐어요. 코스피는 10번 중 8번 올라서 시작했어요"
+assert "올라서" in sentence(fu)                                  # relay.py selfcheck와 같은 계약
 assert zone_of(FLAT) == "flat" and zone_of(FLAT + 1e-9) == "up" and zone_of(-FLAT - 1e-9) == "down"
 for s_ in (sentence(f), sentence(fu), h["cond"]):
-    assert "—" not in s_ and "·" not in s_ and "습니다" not in s_ and "이런 밤" not in s_, s_
+    assert "—" not in s_ and "·" not in s_ and "습니다" not in s_ and "열렸다" not in s_, s_   # 줄표·중점·합쇼체·신문체 금지
 ny = ny_svg(us); assert ny.count("<rect") == 3 and "+3.52%" in ny and "-0.39%" in ny and "mono" not in ny, ny[:200]
-assert "뉴욕 휴장" in ny_svg({})
-kr = kr_svg(fu, 0.0334, "filled"); assert kr.count("<rect") == 4 and "위" in kr and "80%" in kr and "오늘 " in kr and "+3.34%" in kr, kr[:300]   # 막대 3 + 오늘 행 칠
-kr = kr_svg(fu, None, "pending");  assert kr.count("<rect") == 3 and "09:00" in kr and "+3.34%" not in kr
-assert "빈도는 생략" in kr_svg(None, None, "pending")
+assert "휴장이었어요" in ny_svg({})
+kr = kr_svg(fu, 0.0334, "filled"); assert kr.count("<rect") == 4 and "상승" in kr and "80%" in kr and "오늘 " in kr and "+3.34%" in kr, kr[:300]   # 막대 3 + 오늘 행 칠
+kr = kr_svg(fu, None, "pending");  assert kr.count("<rect") == 3 and "9시에" in kr and "+3.34%" not in kr
+assert "통계는 안 냈어요" in kr_svg(None, None, "pending")
 cond, claim = ns["head_html"](headline(fu, None, "pending")); assert cond.startswith('<p class="cond">') and claim.startswith('<p class="claim">')
 print("headline ok")
