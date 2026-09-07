@@ -240,8 +240,8 @@ h1{{font-size:15px;font-weight:800;letter-spacing:-.01em;margin:0}}
 .stamp{{font-size:11px;color:var(--muted);text-align:right;line-height:1.5;white-space:nowrap}}.stamp b{{font-family:var(--mono);color:var(--ink);font-weight:700;font-size:11px}}
 /* 원인 → 결과: 카드에선 나란히(뉴욕 190px, 화살표, 코스피 나머지), 480px 아래선 위아래로 쌓고 화살표는 아래를 향한다 */
 .relay{{display:flex;align-items:center;gap:14px;margin:18px 0 0}}.ny{{flex:0 0 190px}}.kr{{flex:1;min-width:0}}
-.relay svg{{width:100%;height:auto;display:block}}.arrow{{flex:0 0 16px;width:16px;height:16px}}
-@media (max-width:480px){{.relay{{flex-direction:column;align-items:stretch;gap:8px}}.ny{{flex:none;max-width:260px}}.arrow{{transform:rotate(90deg);margin-left:6px}}}}
+.relay svg{{width:100%;height:auto;display:block}}.relay .arrow{{flex:none;width:16px;height:16px}}
+@media (max-width:480px){{.relay{{flex-direction:column;align-items:stretch;gap:8px}}.ny{{flex:none;max-width:260px}}.relay .arrow{{transform:rotate(90deg);margin-left:6px}}}}
 /* 제목 두 줄: 조건(작게, 뮤트) → 규칙(크게, 잉크). 오늘 시가는 그림의 마커가 말한다 */
 .cond{{font-size:14px;font-weight:600;color:var(--muted);margin:16px 0 3px;letter-spacing:-.005em}}
 .claim{{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:0;word-break:keep-all;font-variant-numeric:tabular-nums}}
