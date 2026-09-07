@@ -144,7 +144,7 @@ def place(x, n_chars, L, R):
 
 
 def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h, f=None):
-    W, H = 540, 400
+    W, H = 540, 418
     L, R = 92, 470                 # 축 영역 (왼쪽 시각 라벨 공간 확보)
     x0 = (L + R) / 2
     vals = [prev["kospi"], prev["kosdaq"], opened] + [v for w in us.values() if w for v in w[:2]]
@@ -200,15 +200,15 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h, f=N
     for i, k in enumerate(sorted([k for k in US if us.get(k)], key=lambda k: -us[k][1])):   # 오른쪽 점부터 위 행: 지시선이 글자를 안 가로지름
         w = us[k]; xb = sx(w[1])
         anchor, tx = place(xb, len(LABEL[k]) + 7, L, R)
-        ly = yb + 16 + 14 * i
+        ly = yb + 14 + 12 * i
         o.append(f'<line x1="{xb:.1f}" y1="{yb+6:.1f}" x2="{xb:.1f}" y2="{ly-3:.1f}" stroke="{color(w[1])}" stroke-width=".8" opacity=".6"/>')
         o.append(f'<text x="{tx-4 if anchor=="start" else tx+4:.1f}" y="{ly+4:.1f}" text-anchor="{anchor}" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)">{LABEL[k]} </tspan><tspan font-weight="700">{pct(w[1])}</tspan></text>')
     if vix_lv:
         a, b = vix_lv; c = "var(--down)" if b < a else "var(--up)"   # VIX 상승 = 공포 = 파랑 아님, 붉게: 시장 색과 반대이므로 중립 잉크 사용
         o.append(f'<text x="{R}" y="{ya-8:.1f}" text-anchor="end" fill="var(--muted)" font-size="10" opacity=".8"><tspan font-family="var(--sans)">VIX </tspan>{a:.1f} → {b:.1f}</text>')
-    # ★ 오늘 시가 행. 이 카드의 답이 사는 곳.
-    #   평소 구간(이런 밤 뒤 시가가 가장 많이 간 쪽)을 음영으로 깔고 오늘 점을 크게 찍는다.
-    #   점이 음영 안이면 평소대로, 밖이면 평소와 달랐다. 글보다 먼저 눈이 읽는다.
+    # ★ 오늘 시가 행. 이 카드의 답이 사는 곳. 두 줄로 나눠 겹침을 없앤다:
+    #   행(y): 평소 구간 음영 + 연결선 + 점.  아랫줄(y+27): 오늘 숫자, 점 바로 아래 가운데 정렬.
+    #   음영 라벨은 위/아래면 음영 안 먼 끝에, 보합이면 음영이 좁아 바로 위에 둔다.
     y = sy(33)
     ok = bool(f) and f["n"] >= 30
     if ok:
@@ -216,18 +216,21 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h, f=N
         zx0, zx1 = {"up": (sx(FLAT), R), "down": (L, sx(-FLAT)), "flat": (sx(-FLAT), sx(FLAT))}[maj]
         zc = {"up": "var(--up)", "down": "var(--down)", "flat": "var(--flat)"}[maj]
         o.append(f'<rect x="{zx0:.1f}" y="{y-14:.1f}" width="{zx1-zx0:.1f}" height="28" rx="6" fill="{zc}" opacity=".14"/>')
-        lx, la = ((zx0 + 8, "start") if maj != "down" else (zx1 - 8, "end"))
-        o.append(f'<text x="{lx:.1f}" y="{y-19:.1f}" text-anchor="{la}" fill="var(--muted)" font-family="var(--sans)" font-size="10">이런 밤 {share:.0%}는 여기</text>')
+        lab = f"이런 밤 {share:.0%}는 여기"
+        if maj == "up":     lx, ly_, la = R - 8, y + 4, "end"
+        elif maj == "down": lx, ly_, la = L + 8, y + 4, "start"
+        else:               lx, ly_, la = x0, y - 18, "middle"
+        o.append(f'<text x="{lx:.1f}" y="{ly_:.1f}" text-anchor="{la}" fill="var(--muted)" font-family="var(--sans)" font-size="10">{lab}</text>')
     if opened is None:
         o.append(f'<circle cx="{x0:.1f}" cy="{y:.1f}" r="7" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>')
-        o.append(f'<text x="{x0+16:.1f}" y="{y+4:.1f}" fill="var(--muted)" font-family="var(--sans)" font-size="12">{e(pending_text)}</text>')
+        o.append(f'<text x="{x0:.1f}" y="{y+27:.1f}" text-anchor="middle" fill="var(--muted)" font-family="var(--sans)" font-size="12">{e(pending_text)}</text>')
     else:
         x = sx(opened); c = color(opened)
         o.append(f'<line x1="{x0:.1f}" y1="{y:.1f}" x2="{x:.1f}" y2="{y:.1f}" stroke="{c}" stroke-width="2.5"/>')
         o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="9" fill="{c}"/>')
         o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="13" fill="none" stroke="{c}" stroke-width="1.5" opacity=".45"/>')
-        anchor, tx = place(x, 14, L, R); tx = tx + (6 if anchor == "start" else -6)
-        o.append(f'<text x="{tx:.1f}" y="{y+5:.1f}" text-anchor="{anchor}" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)" font-size="11">코스피 시가 </tspan><tspan font-weight="800" font-size="16" fill="{c}">{pct(opened)}</tspan></text>')
+        tx = min(max(x, L + 58), R - 58)   # 숫자 줄이 축 밖으로 안 나가게
+        o.append(f'<text x="{tx:.1f}" y="{y+29:.1f}" text-anchor="middle" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)" font-size="11">코스피 시가 </tspan><tspan font-weight="800" font-size="16" fill="{c}">{pct(opened)}</tspan></text>')
     o.append("</svg>")
     return "\n".join(o)
 
@@ -277,7 +280,7 @@ h1{{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0}}
 .stamp{{font-size:11.5px;color:var(--muted);text-align:right;line-height:1.5;letter-spacing:-.01em;white-space:nowrap}}.stamp b{{font-family:var(--mono);color:var(--ink);font-weight:700;font-size:11px}}
 /* ★ 시간축 광원 — SVG 세로축이 곧 시간이다(위 15:30 전일 마감 → 아래 09:00 오늘 시가).
    축은 SVG 높이의 10~90% 구간(sy가 40..H-40으로 매핑)이라 스톱을 거기 맞췄다. 장식이 아니라 제목 */
-.chart{{margin:10px -6px 0;border-radius:14px;overflow:hidden;
+.chart{{flex:1;display:flex;align-items:center;margin:10px -6px 0;border-radius:14px;overflow:hidden;
 background:linear-gradient(180deg,rgba(108,77,224,.16) 10%,rgba(24,29,58,.05) 48%,rgba(31,200,184,.13) 90%)}}
 svg{{width:100%;height:auto;display:block}}
 /* 헤드라인. 카드의 질문 또는 답, 한 문장. 색은 차트가 말한다. 글은 잉크 한 색 */
