@@ -71,14 +71,15 @@ def frequency(hist, s):
 
 
 def sentence(f):
+    """공유·텔레그램·OG 한 문장. 아침 헤드라인과 같다."""
     if f["n"] < 30:
-        return f"이렇게 마감한 밤은 지난 {int(f['years'])}년간 {f['n']}번뿐이라 빈도를 말하기엔 표본이 적습니다."
-    k, word = max((f["up"], "위로"), (f["down"], "아래로"), (f["flat"], "±0.3% 안에서"), key=lambda x: x[0])
-    return (f"지난 {int(f['years'])}년, 뉴욕이 이렇게 마감한 밤은 {f['n']}번. "
-            f"다음 날 코스피 시가는 {k}번({k / f['n']:.0%}) {word} 열렸습니다.")
+        return f"이렇게 마감한 밤은 {int(f['years'])}년간 {f['n']}번뿐이라 빈도는 생략"
+    maj = max(("up", "down", "flat"), key=lambda z: f[z])
+    return f"뉴욕이 이렇게 마감한 밤 {f['n']}번, 코스피 시가는 {f[maj] / f['n']:.0%}가 {OPENED[maj]}"
 
 
-ZONE_WORD = {"up": "위로", "down": "아래로", "flat": "±0.3% 안에서"}
+OPENED = {"up": "위로 열렸다", "down": "아래로 열렸다", "flat": "±0.3% 안에서 열렸다"}   # 과거 시가가 간 곳
+SIDE = {"up": "위쪽", "down": "아래쪽", "flat": "±0.3% 안"}                                   # 오늘 시가가 간 곳
 
 
 def zone_of(x):
@@ -86,28 +87,26 @@ def zone_of(x):
 
 
 def headline(f, opened, status):
-    """카드 맨 위 한 줄. 아침엔 질문(이런 밤 뒤 시가는 보통 어디?), 시가가 오면 답(오늘은 거기 들었나).
-    예측 아님 — 과거 빈도와 오늘 시가의 분류만. 누적 적중률은 non-goal이라 만들지 않는다.
-    렌더러는 lead + <b class=z-{zone}>num</b> + tail 로 그린다(웹·PNG·미니앱 공통)."""
+    """카드 맨 위 한 문장. 아침엔 질문(이런 밤 뒤 시가는 보통 어디?), 시가가 오면 답(오늘은 거기 갔나).
+    예측 아님. 과거 빈도와 오늘 시가의 분류만. 누적 적중률은 non-goal이라 만들지 않는다.
+    zone은 글이 아니라 차트(시가 점, 평소 구간 음영)가 쓴다. 글은 잉크 한 색."""
     ok = bool(f) and f["n"] >= 30
     maj = max(("up", "down", "flat"), key=lambda z: f[z]) if ok else None
     if status == "pending":
-        if not ok: return {"lead": "답은 09:00 시가 — ", "num": "", "tail": "비슷한 밤이 드물어 빈도는 생략", "zone": None}
-        return {"lead": f"이런 밤 {f['n']}번 중 ", "num": f"{f[maj] / f['n']:.0%}", "tail": f"는 {ZONE_WORD[maj]} 열렸습니다 — 답은 09:00 시가", "zone": maj}
+        return {"text": sentence(f) if f else "밤사이 뉴욕 휴장", "zone": maj}
     if status == "closed" or opened is None:
-        if not ok: return {"lead": "오늘 휴장", "num": "", "tail": "", "zone": None}
-        return {"lead": "오늘 휴장 — 이런 밤 뒤엔 ", "num": f"{f[maj] / f['n']:.0%}", "tail": f"가 {ZONE_WORD[maj]} 열렸습니다", "zone": maj}
+        return {"text": f"오늘은 휴장. {sentence(f)}" if f else "오늘은 휴장", "zone": maj}
     z = zone_of(opened)
-    if not ok: return {"lead": "오늘 시가 ", "num": pct(opened), "tail": ". 비슷한 밤이 드물어 빈도는 생략", "zone": z}
+    if not ok:
+        return {"text": f"코스피 시가 {pct(opened)}. {sentence(f)}" if f else f"코스피 시가 {pct(opened)}", "zone": z}
     share = f[z] / f["n"]
-    tail = (f". 이런 밤 뒤 {share:.0%}만 그랬던 쪽, {ZONE_WORD[z]} 열렸습니다" if share < 0.4
-            else f". 이런 밤 뒤 {share:.0%}가 그랬듯 {ZONE_WORD[z]} 열렸습니다")
-    return {"lead": "오늘 시가 ", "num": pct(opened), "tail": tail, "zone": z}
+    tail = f"이런 밤 {share:.0%}만 갔던 {SIDE[z]}" if share < 0.4 else f"이런 밤 {share:.0%}가 그랬듯 {SIDE[z]}"
+    return {"text": f"코스피 시가 {pct(opened)}, {tail}", "zone": z}
 
 
 def head_html(h):
-    e = html.escape
-    return f'<p class="headline">{e(h["lead"])}<b class="z-{h["zone"] or "flat"}">{e(h["num"])}</b>{e(h["tail"])}</p>'
+    return f'<p class="headline">{html.escape(h["text"])}</p>'
+
 
 def today_nodes(raw, D):
     K, Q = raw["KOSPI"], raw["KOSDAQ"]
@@ -144,7 +143,7 @@ def place(x, n_chars, L, R):
     return ("start", x + 12) if x + 12 + est <= R + 40 else ("end", x - 12)
 
 
-def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h):
+def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h, f=None):
     W, H = 540, 400
     L, R = 92, 470                 # 축 영역 (왼쪽 시각 라벨 공간 확보)
     x0 = (L + R) / 2
@@ -160,10 +159,12 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h):
     # 가로 눈금
     step = 0.5 if rng <= 2 else 1
     v = -np.floor(rng / step) * step
+    every = 2 if 2 * rng / step + 1 > 7 else 1   # 라벨 7개 초과면 한 칸 걸러 표기. 숫자 띠가 차트보다 시끄러웠다
     while v <= rng + 1e-9:
         x = sx(v / 100)
         o.append(f'<line x1="{x:.1f}" y1="30" x2="{x:.1f}" y2="{H-30}" stroke="var(--rule)" stroke-width="{1.2 if abs(v)<1e-9 else 0.5}" {"stroke-dasharray=\"2 4\"" if abs(v)>1e-9 else ""}/>')
-        o.append(f'<text x="{x:.1f}" y="22" text-anchor="middle" fill="var(--muted)">{v:+.1f}%</text>' if abs(v) > 1e-9 else f'<text x="{x:.1f}" y="22" text-anchor="middle" fill="var(--muted)">0</text>')
+        if int(round(v / step)) % every == 0:
+            o.append(f'<text x="{x:.1f}" y="22" text-anchor="middle" fill="var(--muted)">{v:+.1f}%</text>' if abs(v) > 1e-9 else f'<text x="{x:.1f}" y="22" text-anchor="middle" fill="var(--muted)">0</text>')
         v += step
     # 시각 라벨 + 눈금
     hm = lambda h: f"{int(h) % 24:02d}:{int(round((h % 1) * 60)):02d}"
@@ -172,11 +173,9 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h):
         o.append(f'<text x="{L-14}" y="{y+4:.1f}" text-anchor="end" fill="var(--ink)" font-weight="600">{lab}</text>')
         o.append(f'<text x="{L-14}" y="{y+17:.1f}" text-anchor="end" fill="var(--muted)" font-family="var(--sans)" font-size="10">{sub}</text>')
         o.append(f'<line x1="{L-8}" y1="{y:.1f}" x2="{L-2}" y2="{y:.1f}" stroke="var(--ink)"/>')
-    yq = (sy(15.5) + sy(us_open_h)) / 2
-    o.append(f'<text x="{x0:.1f}" y="{yq:.1f}" text-anchor="middle" fill="var(--muted)" font-family="var(--sans)" font-size="10" opacity=".8">유럽 장은 생략 — 코스피 시가와 거의 무관</text>')
     # 어제 마감 노드 — 맥락일 뿐 질문의 주역이 아니라 톤다운. 주역은 뉴욕 마감→오늘 시가
     y = sy(15.5)
-    o.append('<g opacity=".6">')
+    o.append('<g opacity=".5">')
     for key, r, lab, dy in [("kosdaq", 4, "코스닥", 14), ("kospi", 6, "코스피", -8)]:
         if prev[key] is None: continue
         x = sx(prev[key])
@@ -206,23 +205,29 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h):
         o.append(f'<text x="{tx-4 if anchor=="start" else tx+4:.1f}" y="{ly+4:.1f}" text-anchor="{anchor}" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)">{LABEL[k]} </tspan><tspan font-weight="700">{pct(w[1])}</tspan></text>')
     if vix_lv:
         a, b = vix_lv; c = "var(--down)" if b < a else "var(--up)"   # VIX 상승 = 공포 = 파랑 아님, 붉게: 시장 색과 반대이므로 중립 잉크 사용
-        o.append(f'<text x="{R}" y="{ya-8:.1f}" text-anchor="end" fill="var(--muted)"><tspan font-family="var(--sans)">VIX </tspan>{a:.1f} → <tspan fill="var(--ink)" font-weight="700">{b:.1f}</tspan></text>')
-    # 오늘 시가 노드
+        o.append(f'<text x="{R}" y="{ya-8:.1f}" text-anchor="end" fill="var(--muted)" font-size="10" opacity=".8"><tspan font-family="var(--sans)">VIX </tspan>{a:.1f} → {b:.1f}</text>')
+    # ★ 오늘 시가 행. 이 카드의 답이 사는 곳.
+    #   평소 구간(이런 밤 뒤 시가가 가장 많이 간 쪽)을 음영으로 깔고 오늘 점을 크게 찍는다.
+    #   점이 음영 안이면 평소대로, 밖이면 평소와 달랐다. 글보다 먼저 눈이 읽는다.
     y = sy(33)
-    # ★ ±0.3% 밴드 — 헤드라인의 질문("이런 밤 뒤 시가는 보통 여기 안")을 차트 위에 그린다.
-    #   시가 점이 밴드 안이면 보합, 밖이면 위/아래. 답이 눈으로 먼저 읽힌다
-    o.append(f'<rect x="{sx(-FLAT):.1f}" y="{y-10:.1f}" width="{sx(FLAT)-sx(-FLAT):.1f}" height="20" rx="5" fill="var(--flat)" opacity=".16"/>')
-    # 라벨은 밴드 왼쪽 — 오른쪽은 뉴욕 마감 라벨 스택과 시가 라벨이 내려와 붐빈다(9/7 카드에서 확인)
-    o.append(f'<text x="{sx(-FLAT)-5:.1f}" y="{y+3:.1f}" text-anchor="end" fill="var(--muted)" font-size="9">±0.3%</text>')
+    ok = bool(f) and f["n"] >= 30
+    if ok:
+        maj = max(("up", "down", "flat"), key=lambda z: f[z]); share = f[maj] / f["n"]
+        zx0, zx1 = {"up": (sx(FLAT), R), "down": (L, sx(-FLAT)), "flat": (sx(-FLAT), sx(FLAT))}[maj]
+        zc = {"up": "var(--up)", "down": "var(--down)", "flat": "var(--flat)"}[maj]
+        o.append(f'<rect x="{zx0:.1f}" y="{y-14:.1f}" width="{zx1-zx0:.1f}" height="28" rx="6" fill="{zc}" opacity=".14"/>')
+        lx, la = ((zx0 + 8, "start") if maj != "down" else (zx1 - 8, "end"))
+        o.append(f'<text x="{lx:.1f}" y="{y-19:.1f}" text-anchor="{la}" fill="var(--muted)" font-family="var(--sans)" font-size="10">이런 밤 {share:.0%}는 여기</text>')
     if opened is None:
-        o.append(f'<circle cx="{x0:.1f}" cy="{y:.1f}" r="6" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>')
-        o.append(f'<text x="{x0+14:.1f}" y="{y+4:.1f}" fill="var(--muted)" font-family="var(--sans)" font-size="12">{e(pending_text)}</text>')
+        o.append(f'<circle cx="{x0:.1f}" cy="{y:.1f}" r="7" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>')
+        o.append(f'<text x="{x0+16:.1f}" y="{y+4:.1f}" fill="var(--muted)" font-family="var(--sans)" font-size="12">{e(pending_text)}</text>')
     else:
-        x = sx(opened)
-        o.append(f'<line x1="{x0:.1f}" y1="{y:.1f}" x2="{x:.1f}" y2="{y:.1f}" stroke="{color(opened)}" stroke-width="2"/>')
-        o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="7" fill="{color(opened)}"/>')
-        anchor, tx = place(x, 13, L, R)
-        o.append(f'<text x="{tx:.1f}" y="{y+4:.1f}" text-anchor="{anchor}" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)">코스피 시가 </tspan><tspan font-weight="700" font-size="13">{pct(opened)}</tspan></text>')
+        x = sx(opened); c = color(opened)
+        o.append(f'<line x1="{x0:.1f}" y1="{y:.1f}" x2="{x:.1f}" y2="{y:.1f}" stroke="{c}" stroke-width="2.5"/>')
+        o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="9" fill="{c}"/>')
+        o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="13" fill="none" stroke="{c}" stroke-width="1.5" opacity=".45"/>')
+        anchor, tx = place(x, 14, L, R); tx = tx + (6 if anchor == "start" else -6)
+        o.append(f'<text x="{tx:.1f}" y="{y+5:.1f}" text-anchor="{anchor}" fill="var(--ink)"><tspan font-family="var(--sans)" fill="var(--muted)" font-size="11">코스피 시가 </tspan><tspan font-weight="800" font-size="16" fill="{c}">{pct(opened)}</tspan></text>')
     o.append("</svg>")
     return "\n".join(o)
 
@@ -230,21 +235,21 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h):
 def freq_html(f):
     if not f or f["n"] == 0:
         return ""
-    n = f["n"]; seg = lambda k, c, lab: (f'<div class="seg" style="flex:{f[k]};background:{c}" title="{lab} {f[k]}"></div>' if f[k] else "")
-    bar = seg("down", "var(--down)", "아래") + seg("flat", "var(--flat)", "보합") + seg("up", "var(--up)", "위")
-    leg = " · ".join(f'<span style="color:{c}">{lab} {f[k]/n:.0%}</span>' for k, c, lab in [("down", "var(--down)", "아래"), ("flat", "var(--flat)", "±0.3%"), ("up", "var(--up)", "위")])
-    return f'<section class="freq"><p class="lede">{html.escape(sentence(f))}</p><div class="bar">{bar}</div><p class="legend">{leg} <span class="n">n={n} · 뉴욕 {f["bin"]} 구간</span></p></section>'
+    n = f["n"]; seg = lambda k, c: (f'<div class="seg" style="flex:{f[k]};background:{c}"></div>' if f[k] else "")
+    bar = seg("down", "var(--down)") + seg("flat", "var(--flat)") + seg("up", "var(--up)")
+    leg = "".join(f'<span style="color:{c}">{lab} {f[k]/n:.0%}</span>' for k, c, lab in [("down", "var(--down)", "아래"), ("flat", "var(--flat)", "±0.3%"), ("up", "var(--up)", "위")])
+    return f'<section class="freq"><div class="bar">{bar}</div><p class="legend">{leg}<span class="n">뉴욕 {f["bin"]} 마감 {n}밤</span></p></section>'
 
 
 def pending_text(status):
-    return "09:00 이후 채워집니다" if status == "pending" else ("오늘 휴장" if status == "closed" else "")
+    return "09:00에 채워진다" if status == "pending" else ("오늘 휴장" if status == "closed" else "")
 
 
 def page(D, prev, us, vix_lv, opened, f, status, prev_link):
-    date_ko = f"{D.year}년 {D.month}월 {D.day}일 {'월화수목금토일'[D.weekday()]}요일"
+    date_ko = f"{D.month}월 {D.day}일 {'월화수목금토일'[D.weekday()]}요일"
     pending = pending_text(status)
     us_day = next((raw_d for raw_d in [prev["date"]]), prev["date"])
-    svg = chart_svg(prev, us, vix_lv, opened, pending, *us_hours(us_day))
+    svg = chart_svg(prev, us, vix_lv, opened, pending, *us_hours(us_day), f=f)
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>밤사이 코스피 · {D:%Y-%m-%d}</title>
 <meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
@@ -268,29 +273,27 @@ linear-gradient(180deg,#141438 0,#0A0D1E 46%,var(--void) 100%)}}
 /* 원래는 잉크 실선이었다. 다크에선 밝은 실선이 제목보다 세게 튀어 스펙트럼 한 줄로 바꿈 */
 header{{position:relative;display:flex;justify-content:space-between;align-items:baseline;padding-bottom:10px}}
 header::after{{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5px;background:linear-gradient(90deg,var(--night),var(--dawn),transparent)}}
-h1{{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0}}h1 small{{font-weight:500;color:var(--muted);font-size:12px;margin-left:8px;letter-spacing:0}}
+h1{{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0}}
 .stamp{{font-size:11.5px;color:var(--muted);text-align:right;line-height:1.5;letter-spacing:-.01em;white-space:nowrap}}.stamp b{{font-family:var(--mono);color:var(--ink);font-weight:700;font-size:11px}}
 /* ★ 시간축 광원 — SVG 세로축이 곧 시간이다(위 15:30 전일 마감 → 아래 09:00 오늘 시가).
    축은 SVG 높이의 10~90% 구간(sy가 40..H-40으로 매핑)이라 스톱을 거기 맞췄다. 장식이 아니라 제목 */
 .chart{{margin:10px -6px 0;border-radius:14px;overflow:hidden;
 background:linear-gradient(180deg,rgba(108,77,224,.16) 10%,rgba(24,29,58,.05) 48%,rgba(31,200,184,.13) 90%)}}
 svg{{width:100%;height:auto;display:block}}
-/* 헤드라인 — 카드가 던지는 질문/답. 숫자만 등락색, 나머지는 잉크 */
-.headline{{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.35;margin:14px 0 0;word-break:keep-all}}
-.headline b{{font-variant-numeric:tabular-nums}}.z-up{{color:var(--up)}}.z-down{{color:var(--down)}}.z-flat{{color:var(--ink)}}
+/* 헤드라인. 카드의 질문 또는 답, 한 문장. 색은 차트가 말한다. 글은 잉크 한 색 */
+.headline{{font-size:22px;font-weight:800;letter-spacing:-.022em;line-height:1.3;margin:16px 0 2px;word-break:keep-all;font-variant-numeric:tabular-nums}}
 .freq{{border-top:1px solid var(--rule);padding-top:14px;margin-top:4px}}
-.lede{{font-size:16.5px;line-height:1.5;font-weight:600;letter-spacing:-.01em;margin:0 0 12px;word-break:keep-all}}
 .bar{{display:flex;height:9px;border-radius:3px;overflow:hidden;gap:2px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}}.seg{{min-width:2px}}
-.legend{{font-family:var(--mono);font-size:11px;margin:8px 0 0;color:var(--muted)}}.legend .n{{margin-left:6px}}
+.legend{{display:flex;gap:14px;align-items:baseline;font-family:var(--mono);font-size:11px;font-weight:700;margin:9px 0 0}}.legend .n{{margin-left:auto;font-family:var(--sans);font-weight:500;color:var(--muted)}}
 footer{{margin-top:auto;padding-top:14px;font-size:10.5px;color:var(--muted);line-height:1.55;display:flex;justify-content:space-between;gap:12px}}
 footer a{{color:var(--dawn)}}
-@media (max-width:480px){{.sheet{{padding:18px 14px 16px}}.lede{{font-size:15px}}header{{flex-direction:column;align-items:flex-start;gap:4px}}h1 small{{display:block;margin:2px 0 0}}.stamp{{text-align:left}}.stamp br{{display:none}}.stamp b{{margin-left:6px}}}}
+@media (max-width:480px){{.sheet{{padding:18px 14px 16px}}.lede{{font-size:15px}}header{{flex-direction:column;align-items:flex-start;gap:4px}}.stamp{{text-align:left}}}}
 </style></head><body><div class="sheet">
-<header><h1>밤사이 코스피<small>전일 마감 → 뉴욕 → 오늘 시가, 릴레이 한 장</small></h1><div class="stamp">{date_ko}<br><b>{"06:45" if status=="pending" else "09:06"}</b> KST</div></header>
+<header><h1>밤사이 코스피</h1><div class="stamp">{date_ko} <b>{"06:45" if status=="pending" else "09:06"}</b></div></header>
 {head_html(headline(f, opened, status))}
 <div class="chart">{svg}</div>
 {freq_html(f)}
-<footer><span>정보 제공 목적이며 투자 판단 자료가 아닙니다. 상승 빨강·하락 파랑. 변화율은 전일 종가 대비, 뉴욕은 ETF(SOXX·QQQ·SPY) 일별 시가·종가. 데이터 Yahoo Finance.</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">← {prev_link[5:]}</a><br>' if prev_link else ''}{SITE_URL.replace("https://","")}</span></footer>
+<footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}{SITE_URL.replace("https://","")}</span></footer>
 </div></body></html>"""
 
 
@@ -317,7 +320,7 @@ def build(phase):
     (SITE / "index.html").write_text(htm.replace('href="../', 'href="./'), encoding="utf-8")
     payload = json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
         "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "freq": f,
-        "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, pending_text(status), *us_hours(prev["date"])),
+        "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, pending_text(status), *us_hours(prev["date"]), f=f),
         "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float)
     (SITE / "latest.json").write_text(payload, encoding="utf-8")
     (SITE / "days").mkdir(exist_ok=True); (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(payload, encoding="utf-8")
@@ -340,7 +343,7 @@ def backfill(n):
         (SITE / "days").mkdir(exist_ok=True)
         (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": "filled", "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
             "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "freq": f,
-            "head": headline(f, opened, "filled"), "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, "", *us_hours(prev["date"]))}, ensure_ascii=False, default=float), encoding="utf-8")
+            "head": headline(f, opened, "filled"), "sentence": sentence(f) if f and f["n"] else None, "svg": chart_svg(prev, us, vix_lv, opened, "", *us_hours(prev["date"]), f=f)}, ensure_ascii=False, default=float), encoding="utf-8")
     (SITE / "index.json").write_text(json.dumps(sorted((p.stem for p in (SITE / "days").glob("*.json")), reverse=True)), encoding="utf-8")
     print("backfilled", n)
 

@@ -2,8 +2,8 @@ export type Pair = [number, number] | null
 
 export interface Freq { bin: string; n: number; up: number; flat: number; down: number; years: number }
 
-// 카드 맨 위 한 줄. 렌더: lead + <b class=z-{zone}>num</b> + tail
-export interface Head { lead: string; num: string; tail: string; zone: 'up' | 'flat' | 'down' | null }
+// 카드 맨 위 한 문장. 색은 차트가 말하므로 글은 잉크 한 색. zone은 참고용
+export interface Head { text: string; zone: 'up' | 'flat' | 'down' | null }
 
 export interface RelayDay {
   date: string

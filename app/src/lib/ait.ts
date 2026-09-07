@@ -11,7 +11,7 @@ export async function shareRelay(text: string) {
     const got = await Promise.resolve(getTossShareLink('intoss://kospi-relay'))
     if (typeof got === 'string' && got) link = got
   } catch { /* 기본 딥링크 */ }
-  const message = `${text}\n뉴욕 마감에서 오늘 코스피 시가까지, 한 장 — 밤사이 코스피\n${link}`
+  const message = `${text}\n밤사이 코스피\n${link}`
   try { await Promise.resolve(share({ message })) }
   catch { try { await Promise.resolve(setClipboardText(message)) } catch { /* noop */ } }
 }

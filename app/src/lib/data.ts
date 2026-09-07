@@ -8,9 +8,9 @@ const KEY = 'relay:latest:v1'
 export function cachedLatest(): RelayDay {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) { const d = JSON.parse(raw) as RelayDay; if (d.date >= (seed as RelayDay).date) return d }
+    if (raw) { const d = JSON.parse(raw) as RelayDay; if (d.date >= (seed as unknown as RelayDay).date) return d }
   } catch { /* storage optional */ }
-  return seed as RelayDay
+  return seed as unknown as RelayDay
 }
 
 async function getJson<T>(path: string): Promise<T> {

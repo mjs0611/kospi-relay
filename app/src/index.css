@@ -37,9 +37,8 @@ background:conic-gradient(from 200deg,var(--night),var(--dawn),rgba(255,255,255,
 .stamp::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5px;background:linear-gradient(90deg,var(--night),var(--dawn),transparent)}
 .stamp b{font-family:var(--mono);color:var(--ink);font-size:11px}
 .stamp .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink)}
-/* 헤드라인 — 카드가 던지는 질문/답. 숫자만 등락색, 나머지는 잉크 */
-.headline{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.35;margin:14px 2px 0;word-break:keep-all}
-.headline b{font-variant-numeric:tabular-nums}.z-up{color:var(--up)}.z-down{color:var(--down)}.z-flat{color:var(--ink)}
+/* 헤드라인. 카드의 질문 또는 답, 한 문장. 색은 차트가 말한다. 글은 잉크 한 색 */
+.headline{font-size:22px;font-weight:800;letter-spacing:-.022em;line-height:1.3;margin:16px 2px 2px;word-break:keep-all;font-variant-numeric:tabular-nums}
 /* ★ 시간축 광원 — 이 앱의 서명.
    SVG 세로축이 곧 시간이다(위 15:30 전일 마감 → 아래 09:00 오늘 시가).
    그래서 차트 뒤 그라디언트도 위가 밤(인디고) 아래가 새벽(틸)이다. 장식이 아니라 제목.
@@ -50,12 +49,11 @@ background:linear-gradient(180deg,rgba(108,77,224,.16) 10%,rgba(24,29,58,.05) 48
 .chart svg{width:100%;height:auto;display:block}
 
 .freq{border-top:1px solid var(--rule);padding-top:14px;margin-top:6px}
-.lede{font-size:16.5px;line-height:1.5;font-weight:600;letter-spacing:-.01em;margin:0 0 12px}
 /* 세그먼트 색은 인라인 style로 background만 들어온다 — currentColor는 상속 텍스트 색이라
    글로우를 걸면 세그먼트 색이 아니라 흰빛이 번진다. 데이터 그래픽에 글로우는 안 쓴다 */
 .bar{display:flex;height:9px;border-radius:3px;overflow:hidden;gap:2px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
 .seg{min-width:2px}
-.legend{font-family:var(--mono);font-size:11px;margin:8px 0 0;color:var(--muted)}.legend .n{margin-left:8px}
+.legend{display:flex;gap:14px;align-items:baseline;font-family:var(--mono);font-size:11px;font-weight:700;margin:9px 0 0}.legend .n{margin-left:auto;font-family:var(--sans);font-weight:500;color:var(--muted)}
 .note{position:relative;z-index:1;font-size:12px;color:var(--muted);margin:10px 2px 0}
 
 .actions{position:relative;z-index:1;margin:18px 0 6px}
@@ -67,15 +65,14 @@ background:linear-gradient(180deg,rgba(108,77,224,.16) 10%,rgba(24,29,58,.05) 48
 .actions .tds-mobile-button{border-radius:18px;overflow:hidden;box-shadow:0 10px 30px -12px var(--night)}
 .actions .tds-mobile-button>div:first-of-type{background:linear-gradient(140deg,var(--night),#3E4BD8)}
 
-.past,.about{position:relative;z-index:1}
-.past h2,.about h2{font-size:13px;color:var(--muted);font-weight:600;margin:22px 0 10px;letter-spacing:.02em}
+.past{position:relative;z-index:1}
+.past h2{font-size:13px;color:var(--muted);font-weight:600;margin:22px 0 10px;letter-spacing:.02em}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.chips::-webkit-scrollbar{display:none}.chips::after{content:"";flex:0 0 8px}
 .chip{flex:0 0 auto;height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--edge);background:var(--glass);color:var(--muted);font:600 13px var(--mono);box-shadow:inset 0 1px 0 rgba(255,255,255,.14);transition:transform .12s cubic-bezier(.34,1.4,.64,1),color .15s ease,border-color .15s ease}
 .chip:active{transform:scale(.95)}
 .chip.on{color:var(--ink);border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.11);box-shadow:inset 0 1px 0 var(--lit),0 0 22px -8px var(--dawn)}
 .chip:disabled{opacity:.55}
-.about p{font-size:14px;line-height:1.6;color:var(--ink);margin:0 0 10px}
-.about .fine{font-size:11.5px;color:var(--muted);opacity:.85;line-height:1.55;margin-top:14px}
+.fine{position:relative;z-index:1;font-size:11.5px;color:var(--muted);margin:22px 2px 0}
 .ad-banner{position:relative;z-index:1;margin-top:20px;border-radius:14px;overflow:hidden}.ad-banner:empty{display:none}
 :focus-visible{outline:2px solid var(--dawn);outline-offset:2px;border-radius:6px}
 
