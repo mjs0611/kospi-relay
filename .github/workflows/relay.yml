@@ -2,7 +2,7 @@ name: relay
 on:
   schedule:
     # GitHub 스케줄은 지연·누락이 잦다(첫 예정 실행 9/7 06:45가 통째로 빠짐). 정각·45분 회피 + 재시도 크론.
-    # 파이프라인은 멱등이라 두 번 돌아도 같은 결과. 텔레그램 중복 발송은 relay.py가 막는다.
+    # 파이프라인은 멱등이라 두 번 돌아도 같은 결과. 정시 트리거는 Mac launchd(ops/)가 맡고 이 cron은 백업.
     - cron: "47 21 * * 0-4"   # 06:47 KST 월–금 morning
     - cron: "20 22 * * 0-4"   # 07:20 KST 월–금 morning 재시도
     - cron: "9 0 * * 1-5"     # 09:09 KST 월–금 open
@@ -36,8 +36,6 @@ jobs:
         env:
           RELAY_DATE: ${{ github.event.inputs.date }}
           RELAY_FINAL: ${{ env.RELAY_FINAL }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

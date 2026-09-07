@@ -235,8 +235,6 @@ footer a{{color:#2C5FD6}}
 # ---------- pipeline ----------
 def build(phase):
     now = dt.datetime.now(KST); D = pd.Timestamp(os.environ.get("RELAY_DATE") or now.date())  # RELAY_DATE=YYYY-MM-DD 로컬 재현용
-    try: prior = json.loads((SITE / "latest.json").read_text(encoding="utf-8"))   # gh-pages 체크아웃본 — 재시도 크론 판별용
-    except Exception: prior = None
     raw = fetch()
     hist = align(raw)
     prev, us, vix_lv, opened = today_nodes(raw, D)
@@ -262,9 +260,6 @@ def build(phase):
     (SITE / "index.json").write_text(json.dumps(sorted((p.stem for p in (SITE / "days").glob("*.json")), reverse=True)), encoding="utf-8")
     (SITE / ".nojekyll").touch()
     screenshot(SITE / "index.html", SITE / "relay.png")
-    already_sent = bool(prior) and prior.get("date") == f"{D:%Y-%m-%d}" and prior.get("status") == "pending"   # 아침 재시도 크론
-    if phase == "morning" and os.environ.get("TELEGRAM_BOT_TOKEN") and not already_sent:
-        telegram(SITE / "relay.png", sentence(f) if f else "밤사이 뉴욕 휴장")
     print(f"built {D.date()} {status} freq={f}")
 
 
@@ -290,12 +285,6 @@ def screenshot(html_path, png):
         pg.goto(html_path.resolve().as_uri(), wait_until="networkidle")
         pg.evaluate("document.fonts.ready"); pg.wait_for_timeout(300)
         pg.locator(".sheet").screenshot(path=str(png)); b.close()
-
-
-def telegram(png, caption):
-    import requests
-    requests.post(f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendPhoto",
-                  data={"chat_id": os.environ["TELEGRAM_CHAT_ID"], "caption": f"{caption}\n{SITE_URL}"}, files={"photo": open(png, "rb")}, timeout=30).raise_for_status()
 
 
 def selfcheck():

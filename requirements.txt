@@ -2,4 +2,3 @@ yfinance
 pandas
 numpy
 playwright
-requests

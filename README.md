@@ -9,4 +9,9 @@ python relay.py selfcheck
 RELAY_DATE=2026-09-04 python relay.py open   # 로컬 재현
 ```
 
-GitHub Actions가 06:45 KST(`morning`)·09:06 KST(`open`)에 빌드해 `gh-pages`로 배포. 텔레그램은 `TELEGRAM_BOT_TOKEN`·`TELEGRAM_CHAT_ID` 시크릿 있을 때만 발송.
+정시 트리거는 Mac launchd(`ops/com.junseungmo.kospi-relay.plist` → `ops/dispatch.sh`)가 평일 06:45(`morning`)·09:06(`open`)에 `gh workflow run`으로 쏜다. GitHub cron(06:47/07:20, 09:09/09:40/10:30)은 백업 — 4~5시간 늦게 도는 걸 실측해서 정시는 Mac이 맡는다. 빌드는 GitHub Actions, 배포는 `gh-pages`.
+
+```
+cp ops/com.junseungmo.kospi-relay.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.junseungmo.kospi-relay.plist
+tail -f ~/Library/Logs/kospi-relay.log
+```
