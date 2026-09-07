@@ -217,9 +217,10 @@ def chart_svg(prev, us, vix_lv, opened, pending_text, us_open_h, us_close_h, f=N
         zc = {"up": "var(--up)", "down": "var(--down)", "flat": "var(--flat)"}[maj]
         o.append(f'<rect x="{zx0:.1f}" y="{y-14:.1f}" width="{zx1-zx0:.1f}" height="28" rx="6" fill="{zc}" opacity=".14"/>')
         lab = f"이런 밤 {share:.0%}는 여기"
-        if maj == "up":     lx, ly_, la = R - 8, y + 4, "end"
-        elif maj == "down": lx, ly_, la = L + 8, y + 4, "start"
-        else:               lx, ly_, la = x0, y - 18, "middle"
+        # 라벨은 음영 위, 중앙 쪽 끝. 음영 안에 두면 다수 구간일수록 점이 라벨을 덮는다(9/7 카드에서 확인)
+        if maj == "up":     lx, ly_, la = zx0 + 4, y - 19, "start"
+        elif maj == "down": lx, ly_, la = zx1 - 4, y - 19, "end"
+        else:               lx, ly_, la = x0, y - 19, "middle"
         o.append(f'<text x="{lx:.1f}" y="{ly_:.1f}" text-anchor="{la}" fill="var(--muted)" font-family="var(--sans)" font-size="10">{lab}</text>')
     if opened is None:
         o.append(f'<circle cx="{x0:.1f}" cy="{y:.1f}" r="7" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>')
