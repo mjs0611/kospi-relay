@@ -123,7 +123,7 @@ def relay_svg(us, opened, f, status):
     if not vals:
         o.append('<text x="0" y="62" fill="var(--muted)" font-size="12">뉴욕 휴장</text>')
     else:
-        x0, unit = 84, 96 / max(0.005, max(abs(v) for v in vals))   # 0선 x, 1.0 = 96px
+        x0, unit = 78, 76 / max(0.005, max(abs(v) for v in vals))   # 0선 x, 최대 막대 76px. 값 글자가 화살표(x=222)에 닿지 않게
         o.append(f'<line x1="{x0}" y1="24" x2="{x0}" y2="100" stroke="var(--rule)" stroke-width="1"/>')
         for i, k in enumerate(US):
             w = us.get(k); y = 40 + 24 * i
@@ -134,7 +134,7 @@ def relay_svg(us, opened, f, status):
             o.append(f'<rect x="{bx:.1f}" y="{y - 6}" width="{bw:.1f}" height="12" rx="3" fill="{c}"/>')
             o.append(f'<text x="{(x0 + bw if v >= 0 else x0) + 6:.1f}" y="{y + 4}" fill="{c}" font-family="var(--mono)" font-size="12" font-weight="800">{pct(v)}</text>')
     # ── 화살표 ──
-    o.append('<path d="M222,58 L236,64 L222,70" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>')
+    o.append('<path d="M222,46 L236,52 L222,58" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>')   # 두 칸 세로 중심 사이
     # ── 오른쪽: 다음 날 코스피 시가 ──
     L, R = 252, W
     if not f or f["n"] < 30:
