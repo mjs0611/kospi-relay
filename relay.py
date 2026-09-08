@@ -148,8 +148,8 @@ def kr_svg(f, opened, status):
     시가가 오면 오늘이 속한 행을 칠하고 오른쪽 끝에 '오늘 +3.34%'. 320×100."""
     W, H = 320, 100
     o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
-    if not f or f["n"] < 30:
-        o.append('<text x="0" y="46" fill="var(--muted)">비슷한 밤이 적어 통계는 안 냈어요</text>')
+    if not f or f["n"] < 30:   # f 없음 = 뉴욕 휴장(미국 공휴일), 있어도 30 미만 = 표본 부족
+        o.append(f'<text x="0" y="46" fill="var(--muted)">{"뉴욕이 쉰 밤은 통계를 안 내요" if not f else "비슷한 밤이 적어 통계는 안 냈어요"}</text>')
         o.append("</svg>"); return "\n".join(o)
     n = f["n"]; bx, bmax = 82, 120   # 막대 시작 x, 100% = 120px
     z_today = zone_of(opened) if status in ("filled", "done") and opened is not None else None
@@ -259,6 +259,9 @@ document.querySelector('.share').addEventListener('click', async function () {{
 # ---------- pipeline ----------
 def build(phase):
     now = dt.datetime.now(KST); D = pd.Timestamp(os.environ.get("RELAY_DATE") or now.date())  # RELAY_DATE=YYYY-MM-DD 로컬 재현용
+    if phase == "morning" and not os.environ.get("RELAY_DATE") and now.hour >= 9:
+        phase = "close" if now.hour >= 15 else "open"   # 아침 단계를 낮·밤에 돌리면 오늘 시가·마감을 pending으로 덮는다. 실수 방어
+        print("morning after 09:00 → downgraded to", phase)
     raw = fetch()
     hist = align(raw)
     prev, us, vix_lv, opened, closed_pct = today_nodes(raw, D)

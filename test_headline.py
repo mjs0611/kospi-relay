@@ -27,7 +27,7 @@ ny = ny_svg(us); assert ny.count("<rect") == 3 and "+3.52%" in ny and "-0.39%" i
 assert "휴장이었어요" in ny_svg({})
 kr = kr_svg(fu, 0.0334, "filled"); assert kr.count("<rect") == 4 and "상승" in kr and "80%" in kr and "오늘 " in kr and "+3.34%" in kr, kr[:300]   # 막대 3 + 오늘 행 칠
 kr = kr_svg(fu, None, "pending");  assert kr.count("<rect") == 3 and "9시에" in kr and "+3.34%" not in kr
-assert "통계는 안 냈어요" in kr_svg(None, None, "pending")
+assert "뉴욕이 쉰 밤" in kr_svg(None, None, "pending") and "통계는 안 냈어요" in kr_svg({"n": 5, "up": 3, "flat": 1, "down": 1, "bin": "상승", "years": 5}, None, "pending")
 cond, claim = ns["head_html"](headline(fu, None, "pending")); assert cond.startswith('<p class="cond">') and claim.startswith('<p class="claim">')
 tail = ns["tail_text"]
 assert tail("done", 0.0124, 22.5) == "오늘 코스피는 +1.24%로 마감했어요. 뉴욕은 22:30에 열려요"
