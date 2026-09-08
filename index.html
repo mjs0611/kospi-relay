@@ -1,7 +1,9 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>밤사이 코스피 · 2026-09-08</title>
 <meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
-<meta property="og:title" content="밤사이 코스피 09.08"><meta property="og:image" content="https://mjs0611.github.io/kospi-relay/relay.png"><meta property="og:description" content="밤사이 흐름 한 장">
+<meta property="og:type" content="article"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:url" content="https://mjs0611.github.io/kospi-relay/2026-09-08/">
+<meta property="og:title" content="지난밤 뉴욕은 휴장이었어요"><meta property="og:description" content="오늘 코스피 시가">
+<meta property="og:image" content="https://mjs0611.github.io/kospi-relay/relay.png"><meta property="og:image:width" content="1080"><meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* 밤 / 낮 두 쪽. 왼쪽은 밤사이 뉴욕(어둡게), 오른쪽은 다음 날 코스피 시가(밝게). 경계가 곧 릴레이.
@@ -21,13 +23,23 @@ svg{width:100%;height:auto;display:block}
 .tail{font-size:13px;font-weight:600;line-height:1.4;margin:16px 0 0}
 footer{grid-column:1/-1;display:flex;justify-content:space-between;gap:12px;padding:12px 22px 14px;border-top:1px solid #CFD5DE;font-size:10.5px;color:#6C7488}
 footer a{color:#2C5FD6}
+.share{margin-left:10px;border:1px solid #CFD5DE;background:#FFF;color:#10172A;border-radius:6px;padding:4px 10px;font:600 11px var(--sans);cursor:pointer}
 @media (max-width:480px){.sheet{grid-template-columns:1fr}.cond{margin-top:18px}.claim{margin-top:4px}}
 </style></head><body><div class="sheet">
 <section class="night"><p class="brand">밤사이 코스피</p><p class="cond">지난밤 뉴욕은 휴장이었어요</p><p class="lab">밤사이 뉴욕</p><svg viewBox="0 0 236 84" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">
 <text x="0" y="46" fill="var(--muted)">뉴욕은 휴장이었어요</text>
 </svg></section>
-<section class="day"><p class="stamp">9월 8일 화요일 <b>15:40</b></p><p class="claim">오늘 코스피 시가</p><p class="lab">다음 날 코스피 시가</p><svg viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">
+<section class="day"><p class="stamp">9월 8일 화요일 <b>06:45</b></p><p class="claim">오늘 코스피 시가</p><p class="lab">다음 날 코스피 시가</p><svg viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">
 <text x="0" y="46" fill="var(--muted)">비슷한 밤이 적어 통계는 안 냈어요</text>
-</svg><p class="tail">오늘 코스피는 -0.58%로 마감했어요. 뉴욕은 22:30에 열려요</p></section>
-<footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap"><a href="./2026-09-07/">지난 밤 9/7</a> mjs0611.github.io/kospi-relay</span></footer>
+</svg></section>
+<footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap"><a href="./2026-09-07/">지난 밤 9/7</a> <button class="share" type="button">공유</button></span></footer>
+<script>
+/* 공유: Web Share가 있으면 시스템 공유 시트, 없으면 링크 복사. 링크는 이 날짜 페이지(OG 카드 붙음) */
+document.querySelector('.share').addEventListener('click', async function () {
+  var url = 'https://mjs0611.github.io/kospi-relay/2026-09-08/', text = "지난밤 뉴욕은 휴장이었어요";
+  try { if (navigator.share) { await navigator.share({ title: '밤사이 코스피', text: text, url: url }); return; } } catch (e) { return; }
+  try { await navigator.clipboard.writeText(text + '
+' + url); this.textContent = '링크 복사됨'; } catch (e) { location.href = url; }
+});
+</script>
 </div></body></html>
