@@ -6,6 +6,7 @@ python relay.py selfcheck # 정렬·빈도 자기검증
 """
 import json, os, sys, html, datetime as dt
 from pathlib import Path
+import shutil
 import pandas as pd, numpy as np, yfinance as yf
 from zoneinfo import ZoneInfo
 
@@ -207,15 +208,18 @@ def pending_text(status):
     return "09:00에 채워진다" if status == "pending" else ("오늘 휴장" if status == "closed" else "")
 
 
-def page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None):
+def page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None, og_image=None):
     date_ko = f"{D.month}월 {D.day}일 {'월화수목금토일'[D.weekday()]}요일"
     stamp_t = {"pending": "06:45", "done": "15:40"}.get(status, "09:06")   # f-string 안에 dict 리터럴은 못 쓴다
     pending = pending_text(status)
     ny, kr = ny_svg(us), kr_svg(f, opened, status)
+    head = headline(f, opened, status)
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>밤사이 코스피 · {D:%Y-%m-%d}</title>
 <meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
-<meta property="og:title" content="밤사이 코스피 {D:%m.%d}"><meta property="og:image" content="{SITE_URL}/relay.png"><meta property="og:description" content="{html.escape(sentence(f)) if f and f['n'] else '밤사이 흐름 한 장'}">
+<meta property="og:type" content="article"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:url" content="{SITE_URL}/{D:%Y-%m-%d}/">
+<meta property="og:title" content="{html.escape(head['cond'])}"><meta property="og:description" content="{html.escape(head['claim'] or '오늘 코스피 시가')}">
+<meta property="og:image" content="{og_image or f'{SITE_URL}/{D:%Y-%m-%d}/relay.png'}"><meta property="og:image:width" content="1080"><meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* 밤 / 낮 두 쪽. 왼쪽은 밤사이 뉴욕(어둡게), 오른쪽은 다음 날 코스피 시가(밝게). 경계가 곧 릴레이.
@@ -235,11 +239,20 @@ svg{{width:100%;height:auto;display:block}}
 .tail{{font-size:13px;font-weight:600;line-height:1.4;margin:16px 0 0}}
 footer{{grid-column:1/-1;display:flex;justify-content:space-between;gap:12px;padding:12px 22px 14px;border-top:1px solid #CFD5DE;font-size:10.5px;color:#6C7488}}
 footer a{{color:#2C5FD6}}
+.share{{margin-left:10px;border:1px solid #CFD5DE;background:#FFF;color:#10172A;border-radius:6px;padding:4px 10px;font:600 11px var(--sans);cursor:pointer}}
 @media (max-width:480px){{.sheet{{grid-template-columns:1fr}}.cond{{margin-top:18px}}.claim{{margin-top:4px}}}}
 </style></head><body><div class="sheet">
 <section class="night"><p class="brand">밤사이 코스피</p>{head_html(headline(f, opened, status))[0]}<p class="lab">밤사이 뉴욕</p>{ny}</section>
 <section class="day"><p class="stamp">{date_ko} <b>{stamp_t}</b></p>{head_html(headline(f, opened, status))[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}{f'<p class="tail">{html.escape(tail)}</p>' if tail else ''}</section>
-<footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}{SITE_URL.replace("https://","")}</span></footer>
+<footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}<button class="share" type="button">공유</button></span></footer>
+<script>
+/* 공유: Web Share가 있으면 시스템 공유 시트, 없으면 링크 복사. 링크는 이 날짜 페이지(OG 카드 붙음) */
+document.querySelector('.share').addEventListener('click', async function () {{
+  var url = '{SITE_URL}/{D:%Y-%m-%d}/', text = {json.dumps(f"{head['cond']}. {head['claim']}" if head['claim'] else head['cond'], ensure_ascii=False)};
+  try {{ if (navigator.share) {{ await navigator.share({{ title: '밤사이 코스피', text: text, url: url }}); return; }} }} catch (e) {{ return; }}
+  try {{ await navigator.clipboard.writeText(text + '\n' + url); this.textContent = '링크 복사됨'; }} catch (e) {{ location.href = url; }}
+}});
+</script>
 </div></body></html>"""
 
 
@@ -262,10 +275,9 @@ def build(phase):
     else: status = "filled"
     tail = tail_text(status, closed_pct, us_hours(D)[0])
     prev_link = f"{prev['date']:%Y-%m-%d}" if (SITE / f"{prev['date']:%Y-%m-%d}").exists() else None
-    htm = page(D, prev, us, vix_lv, opened, f, status, prev_link, tail)
     day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
-    (day / "index.html").write_text(htm.replace('href="../', 'href="../'), encoding="utf-8")
-    (SITE / "index.html").write_text(htm.replace('href="../', 'href="./'), encoding="utf-8")
+    (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail), encoding="utf-8")
+    (SITE / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail, og_image=f"{SITE_URL}/relay.png").replace('href="../', 'href="./'), encoding="utf-8")
     payload = json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
         "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
         "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
@@ -275,6 +287,7 @@ def build(phase):
     write_index()
     (SITE / ".nojekyll").touch()
     screenshot(SITE / "index.html", SITE / "relay.png")
+    shutil.copyfile(SITE / "relay.png", day / "relay.png")   # 날짜 페이지 OG 이미지 = 그날 카드
     print(f"built {D.date()} {status} freq={f}")
 
 
@@ -295,6 +308,7 @@ def backfill(n):
         f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1])) if us.get("SPY") and us.get("SOXX") else None
         day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
         (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, "done", None, None), encoding="utf-8")
+        screenshot(day / "index.html", day / "relay.png")
         (SITE / "days").mkdir(exist_ok=True)
         (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": "done", "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
             "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": None, "freq": f,

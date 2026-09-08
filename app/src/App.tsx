@@ -22,6 +22,7 @@ export default function App() {
   const [dates, setDates] = useState<DayRef[]>([])
   const [stale, setStale] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
+  const [shareNote, setShareNote] = useState<string | null>(null)   // 복사됨/실패 안내
   const preloaded = useRef(false)
 
   useEffect(() => {
@@ -37,6 +38,10 @@ export default function App() {
   }, [])
 
   const shown = day ?? latest
+  const doShare = async () => {
+    const r = await shareRelay(shown)
+    setShareNote(r === 'copied' ? '공유 문구를 복사했어요. 붙여넣어 보내세요.' : r === 'failed' ? '공유가 안 됐어요. 다시 눌러 주세요.' : null)
+  }
   const pick = async (d: string) => {
     haptic('tickWeak')
     if (d === latest.date) { setDay(null); return }
@@ -50,14 +55,14 @@ export default function App() {
       {stale && <p className="note">최신 데이터를 못 받아 마지막으로 본 릴레이를 보여드려요.</p>}
 
       <div className="actions">
-        <Guard fallback={<button className="btn-fallback" onClick={() => void shareRelay(shown.sentence ?? `${fmt(shown.date)} 밤사이 코스피`)}>공유하기</button>}>
+        <Guard fallback={<button className="btn-fallback" onClick={() => void doShare()}>공유하기</button>}>
           <Suspense fallback={<button className="btn-fallback" disabled>공유하기</button>}>
-            <TdsButton color="dark" display="full" size="xlarge"
-              onClick={() => { haptic('tap'); void shareRelay(shown.sentence ?? `${fmt(shown.date)} 밤사이 코스피`) }}>
+            <TdsButton color="dark" display="full" size="xlarge" onClick={() => { haptic('tap'); void doShare() }}>
               공유하기
             </TdsButton>
           </Suspense>
         </Guard>
+        {shareNote && <p className="note" role="status">{shareNote}</p>}
       </div>
 
       {dates.length > 0 && (
