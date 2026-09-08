@@ -91,8 +91,9 @@ def zone_of(x):
 def headline(f, opened, status):
     """카드 제목 두 줄. cond = 조건('지난밤 뉴욕이 크게 올랐어요'), claim = 규칙('코스피는 10번 중 8번 올라서 시작했어요').
     오늘 시가는 제목이 아니라 그림의 마커가 말한다. 예측 아님, 과거 빈도 서술만. 말투는 해요체."""
-    if not f:
-        return {"cond": "지난밤 뉴욕은 휴장이었어요", "claim": "", "zone": None}
+    if not f:   # 뉴욕 휴장(미국 공휴일). 비교할 밤이 없어도 오늘 시가는 말한다
+        claim = f"코스피는 {pct(opened)}로 시작했어요" if opened is not None and status != "pending" else "비교할 밤이 없어요. 오늘 시가만 볼게요"
+        return {"cond": "지난밤 뉴욕은 휴장이었어요", "claim": claim, "zone": zone_of(opened)}
     cond = NIGHT[f["bin"]]
     if f["n"] < 30:
         return {"cond": cond, "claim": f"비슷한 밤이 {f['n']}번뿐이라 통계는 안 냈어요", "zone": zone_of(opened)}
@@ -148,8 +149,13 @@ def kr_svg(f, opened, status):
     시가가 오면 오늘이 속한 행을 칠하고 오른쪽 끝에 '오늘 +3.34%'. 320×100."""
     W, H = 320, 100
     o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
-    if not f or f["n"] < 30:   # f 없음 = 뉴욕 휴장(미국 공휴일), 있어도 30 미만 = 표본 부족
-        o.append(f'<text x="0" y="46" fill="var(--muted)">{"뉴욕이 쉰 밤은 통계를 안 내요" if not f else "비슷한 밤이 적어 통계는 안 냈어요"}</text>')
+    if not f or f["n"] < 30:   # f 없음 = 뉴욕 휴장(미국 공휴일), 있어도 30 미만 = 표본 부족. 오늘 시가는 그래도 찍는다
+        o.append(f'<text x="0" y="40" fill="var(--muted)">{"뉴욕이 쉰 밤은 통계를 안 내요" if not f else "비슷한 밤이 적어 통계는 안 냈어요"}</text>')
+        if opened is not None and status in ("filled", "done"):
+            c = color(opened)
+            o.append(f'<text x="0" y="76"><tspan fill="var(--muted)">오늘 시가 </tspan><tspan font-weight="800" font-size="14" fill="{c}">{pct(opened)}</tspan></text>')
+        elif status == "pending":
+            o.append(f'<text x="0" y="76" fill="var(--muted)" font-size="11">오늘 시가는 9시에 나와요</text>')
         o.append("</svg>"); return "\n".join(o)
     n = f["n"]; bx, bmax = 82, 120   # 막대 시작 x, 100% = 120px
     z_today = zone_of(opened) if status in ("filled", "done") and opened is not None else None
