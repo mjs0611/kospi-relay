@@ -286,7 +286,8 @@ def build(phase):
     prev_link = f"{prev['date']:%Y-%m-%d}" if (SITE / f"{prev['date']:%Y-%m-%d}").exists() else None
     day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
     (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail), encoding="utf-8")
-    (SITE / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail, og_image=f"{SITE_URL}/relay.png").replace('href="../', 'href="./'), encoding="utf-8")
+    # 루트도 그날 날짜 PNG를 가리킨다. /relay.png 고정 URL이면 카톡이 며칠 전 미리보기를 캐시로 재사용한다
+    (SITE / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail).replace('href="../', 'href="./'), encoding="utf-8")
     payload = json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
         "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
         "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
