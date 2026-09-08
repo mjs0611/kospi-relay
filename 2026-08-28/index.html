@@ -1,7 +1,9 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>밤사이 코스피 · 2026-08-28</title>
 <meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
-<meta property="og:title" content="밤사이 코스피 08.28"><meta property="og:image" content="https://mjs0611.github.io/kospi-relay/relay.png"><meta property="og:description" content="지난밤 뉴욕이 크게 올랐어요. 코스피는 10번 중 8번 올라서 시작했어요">
+<meta property="og:type" content="article"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:url" content="https://mjs0611.github.io/kospi-relay/2026-08-28/">
+<meta property="og:title" content="지난밤 뉴욕이 크게 올랐어요"><meta property="og:description" content="코스피는 10번 중 8번 올라서 시작했어요">
+<meta property="og:image" content="https://mjs0611.github.io/kospi-relay/2026-08-28/relay.png"><meta property="og:image:width" content="1080"><meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* 밤 / 낮 두 쪽. 왼쪽은 밤사이 뉴욕(어둡게), 오른쪽은 다음 날 코스피 시가(밝게). 경계가 곧 릴레이.
@@ -21,6 +23,7 @@ svg{width:100%;height:auto;display:block}
 .tail{font-size:13px;font-weight:600;line-height:1.4;margin:16px 0 0}
 footer{grid-column:1/-1;display:flex;justify-content:space-between;gap:12px;padding:12px 22px 14px;border-top:1px solid #CFD5DE;font-size:10.5px;color:#6C7488}
 footer a{color:#2C5FD6}
+.share{margin-left:10px;border:1px solid #CFD5DE;background:#FFF;color:#10172A;border-radius:6px;padding:4px 10px;font:600 11px var(--sans);cursor:pointer}
 @media (max-width:480px){.sheet{grid-template-columns:1fr}.cond{margin-top:18px}.claim{margin-top:4px}}
 </style></head><body><div class="sheet">
 <section class="night"><p class="brand">밤사이 코스피</p><p class="cond">지난밤 뉴욕이 크게 올랐어요</p><p class="lab">밤사이 뉴욕</p><svg viewBox="0 0 236 84" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">
@@ -37,16 +40,25 @@ footer a{color:#2C5FD6}
 </svg></section>
 <section class="day"><p class="stamp">8월 28일 금요일 <b>15:40</b></p><p class="claim">코스피는 10번 중 8번 올라서 시작했어요</p><p class="lab">다음 날 코스피 시가</p><svg viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">
 <text x="0" y="20" fill="var(--ink)" font-weight="500">상승</text>
-<rect x="82" y="9" width="96.2" height="14" fill="var(--up)"/>
-<text x="184.2" y="20" fill="var(--up)" font-weight="700">80%</text>
+<rect x="82" y="9" width="96.3" height="14" fill="var(--up)"/>
+<text x="184.3" y="20" fill="var(--up)" font-weight="700">80%</text>
 <text x="0" y="48" fill="var(--ink)" font-weight="500">보합</text>
-<rect x="82" y="37" width="19.5" height="14" fill="var(--flat)"/>
-<text x="107.5" y="48" fill="var(--flat)" font-weight="700">16%</text>
+<rect x="82" y="37" width="19.4" height="14" fill="var(--flat)"/>
+<text x="107.4" y="48" fill="var(--flat)" font-weight="700">16%</text>
 <rect x="0" y="59" width="320" height="26" fill="var(--down)" opacity=".12"/>
 <text x="0" y="76" fill="var(--ink)" font-weight="700">하락</text>
 <rect x="82" y="65" width="4.3" height="14" fill="var(--down)"/>
 <text x="92.3" y="76" fill="var(--down)" font-weight="700">4%</text>
 <text x="320" y="76" text-anchor="end" fill="var(--ink)"><tspan fill="var(--muted)">오늘 </tspan><tspan font-weight="800" font-size="14" fill="var(--down)">-0.95%</tspan></text>
-</svg><p class="cap">2021년부터 비슷한 밤 277번</p></section>
-<footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap">mjs0611.github.io/kospi-relay</span></footer>
+</svg><p class="cap">2021년부터 비슷한 밤 278번</p></section>
+<footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap"><button class="share" type="button">공유</button></span></footer>
+<script>
+/* 공유: Web Share가 있으면 시스템 공유 시트, 없으면 링크 복사. 링크는 이 날짜 페이지(OG 카드 붙음) */
+document.querySelector('.share').addEventListener('click', async function () {
+  var url = 'https://mjs0611.github.io/kospi-relay/2026-08-28/', text = "지난밤 뉴욕이 크게 올랐어요. 코스피는 10번 중 8번 올라서 시작했어요";
+  try { if (navigator.share) { await navigator.share({ title: '밤사이 코스피', text: text, url: url }); return; } } catch (e) { return; }
+  try { await navigator.clipboard.writeText(text + '
+' + url); this.textContent = '링크 복사됨'; } catch (e) { location.href = url; }
+});
+</script>
 </div></body></html>
