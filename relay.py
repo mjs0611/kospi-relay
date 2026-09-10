@@ -33,6 +33,8 @@ def fetch():
 
 def signal(spy, soxx):
     # ponytail: 고정식. 5년 백테스트에서 롤링 OLS와 차이 ~1.5pt, 재적합 상태 없음
+    if spy is None or soxx is None:
+        return np.nan
     return 0.4 * (spy + soxx) / 2
 
 
@@ -43,6 +45,10 @@ def us_window(h, P, D):
     if win.empty or before.empty:
         return None
     base = before.Close.iloc[-1]
+    # 세션을 삭제하면 전날 종가를 최신 종가로 오인한다. 존재하지만 미완성인 밤은 따로 보존한다.
+    prices = [base, win.Open.iloc[0], win.Close.iloc[-1]]
+    if not all(np.isfinite(p) and p > 0 for p in prices):
+        return None, None, len(win)
     return win.Open.iloc[0] / base - 1, win.Close.iloc[-1] / base - 1, len(win)
 
 
@@ -55,7 +61,7 @@ def align(raw):
         if None in w.values():
             continue
         rows.append({"D": D, "gap": K.Open.iloc[i] / K.Close.iloc[i - 1] - 1, "s": signal(w["SPY"][1], w["SOXX"][1])})
-    return pd.DataFrame(rows).set_index("D")
+    return pd.DataFrame(rows, columns=["D", "gap", "s"]).set_index("D").replace([np.inf, -np.inf], np.nan).dropna()
 
 
 def bin_of(s):
@@ -63,6 +69,8 @@ def bin_of(s):
 
 
 def frequency(hist, s):
+    if not np.isfinite(s) or hist.empty:
+        return {"bin": "자료 대기", "n": 0, "up": 0, "flat": 0, "down": 0, "years": 0}
     lo, hi, name = bin_of(s)
     g = hist[(hist.s >= lo) & (hist.s < hi)].gap
     n = len(g)
@@ -91,6 +99,9 @@ def zone_of(x):
 def headline(f, opened, status):
     """카드 제목 두 줄. cond = 조건('지난밤 뉴욕이 크게 올랐어요'), claim = 규칙('코스피는 10번 중 8번 올라서 시작했어요').
     오늘 시가는 제목이 아니라 그림의 마커가 말한다. 예측 아님, 과거 빈도 서술만. 말투는 해요체."""
+    if f and f["bin"] == "자료 대기":
+        claim = f"코스피는 {pct(opened)}로 시작했어요" if opened is not None and status != "pending" else "자료가 채워지면 통계를 보여드릴게요"
+        return {"cond": "뉴욕 자료를 기다리고 있어요", "claim": claim, "zone": zone_of(opened)}
     if not f:   # 뉴욕 휴장(미국 공휴일). 비교할 밤이 없어도 오늘 시가는 말한다
         claim = f"코스피는 {pct(opened)}로 시작했어요" if opened is not None and status != "pending" else "비교할 밤이 없어요. 오늘 시가만 볼게요"
         return {"cond": "지난밤 뉴욕은 휴장이었어요", "claim": claim, "zone": zone_of(opened)}
@@ -126,17 +137,20 @@ def ny_svg(us):
     색은 호스트 CSS 변수. 폰에선 낮 쪽 위에 쌓인다."""
     W, H = 236, 84
     o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
-    vals = [us[k][1] for k in US if us.get(k)]
-    if not vals:
+    vals = [us[k][1] for k in US if us.get(k) and us[k][1] is not None]
+    if not any(us.get(k) for k in US):
         o.append('<text x="0" y="46" fill="var(--muted)">뉴욕은 휴장이었어요</text>')
     else:
         # 호가창처럼 길이 = 크기, 색 = 방향. 음수를 왼쪽으로 뻗게 하면 라벨을 침범한다(9/7 카드에서 확인)
-        x0, unit = 76, 100 / max(0.005, max(abs(v) for v in vals))   # 막대 시작 x, 최대 막대 100px
+        x0, unit = 76, 100 / max(0.005, max((abs(v) for v in vals), default=0))   # 막대 시작 x, 최대 막대 100px
         o.append(f'<line x1="{x0}" y1="2" x2="{x0}" y2="{H - 2}" stroke="var(--rule)" stroke-width="1"/>')
         for i, k in enumerate(US):
             w = us.get(k); y = 16 + 26 * i
             o.append(f'<text x="{x0 - 8}" y="{y + 4}" text-anchor="end" fill="var(--muted)">{LABEL[k]}</text>')
             if not w: continue
+            if w[1] is None:
+                o.append(f'<text x="{x0 + 6}" y="{y + 4}" fill="var(--muted)">종가 대기</text>')
+                continue
             v = w[1]; c = color(v); bw = max(2, abs(v) * unit)
             o.append(f'<rect x="{x0}" y="{y - 7}" width="{bw:.1f}" height="14" fill="{c}"/>')
             o.append(f'<text x="{x0 + bw + 6:.1f}" y="{y + 4}" fill="{c}" font-weight="700">{pct(v)}</text>')
@@ -150,7 +164,8 @@ def kr_svg(f, opened, status):
     W, H = 320, 100
     o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
     if not f or f["n"] < 30:   # f 없음 = 뉴욕 휴장(미국 공휴일), 있어도 30 미만 = 표본 부족. 오늘 시가는 그래도 찍는다
-        o.append(f'<text x="0" y="40" fill="var(--muted)">{"뉴욕이 쉰 밤은 통계를 안 내요" if not f else "비슷한 밤이 적어 통계는 안 냈어요"}</text>')
+        note = "뉴욕이 쉰 밤은 통계를 안 내요" if not f else "자료가 채워지면 통계를 보여드릴게요" if f.get("bin") == "자료 대기" else "비슷한 밤이 적어 통계는 안 냈어요"
+        o.append(f'<text x="0" y="40" fill="var(--muted)">{note}</text>')
         if opened is not None and status in ("filled", "done"):
             c = color(opened)
             o.append(f'<text x="0" y="76"><tspan fill="var(--muted)">오늘 시가 </tspan><tspan font-weight="800" font-size="14" fill="{c}">{pct(opened)}</tspan></text>')
@@ -182,9 +197,11 @@ def today_nodes(raw, D):
     us = {k: us_window(raw[k], P, D) for k in US}
     vix = us_window(raw["VIX"], P, D)
     vwin = raw["VIX"][(raw["VIX"].index >= P) & (raw["VIX"].index <= D - pd.Timedelta(days=1))]
-    vix_lv = (raw["VIX"][raw["VIX"].index < P].Close.iloc[-1], vwin.Close.iloc[-1]) if vix else None
+    vix_lv = (raw["VIX"][raw["VIX"].index < P].Close.iloc[-1], vwin.Close.iloc[-1]) if vix and vix[1] is not None else None
     opened = K.Open[D] / K.Close[P] - 1 if D in K.index else None
     closed_pct = K.Close[D] / K.Close[P] - 1 if D in K.index else None   # 장중엔 현재가. close 단계에서만 믿는다
+    opened = opened if opened is not None and np.isfinite(opened) else None
+    closed_pct = closed_pct if closed_pct is not None and np.isfinite(closed_pct) else None
     return prev, us, vix_lv, opened, closed_pct
 
 
@@ -289,9 +306,9 @@ def build(phase):
     # 루트도 그날 날짜 PNG를 가리킨다. /relay.png 고정 URL이면 카톡이 며칠 전 미리보기를 캐시로 재사용한다
     (SITE / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail).replace('href="../', 'href="./'), encoding="utf-8")
     payload = json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
-        "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
+        "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
         "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
-        "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float)
+        "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float, allow_nan=False)
     (SITE / "latest.json").write_text(payload, encoding="utf-8")
     (SITE / "days").mkdir(exist_ok=True); (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(payload, encoding="utf-8")
     write_index()
@@ -321,8 +338,8 @@ def backfill(n):
         screenshot(day / "index.html", day / "relay.png")
         (SITE / "days").mkdir(exist_ok=True)
         (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": "done", "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
-            "us": {k: (list(w[:2]) if w else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": None, "freq": f,
-            "head": headline(f, opened, "done"), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, "done")}, ensure_ascii=False, default=float), encoding="utf-8")
+            "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": None, "freq": f,
+            "head": headline(f, opened, "done"), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, "done")}, ensure_ascii=False, default=float, allow_nan=False), encoding="utf-8")
     write_index()
     print("backfilled", n)
 
