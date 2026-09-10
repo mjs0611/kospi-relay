@@ -1,4 +1,4 @@
-yfinance
-pandas
-numpy
-playwright
+yfinance==1.7.0
+pandas==3.0.5
+numpy==2.5.3
+playwright==1.62.0

@@ -11,7 +11,7 @@ export interface Head { cond: string; claim: string; zone: 'up' | 'flat' | 'down
 export interface RelayDay {
   date: string
   status: 'pending' | 'filled' | 'closed' | 'done'   // done = 15:40 마감 반영
-  prev: { date: string; kospi: number; kosdaq: number | null }
+  prev: { date: string; kospi: number | null; kosdaq: number | null }
   us: { SOXX: Pair; QQQ: Pair; SPY: Pair }
   vix: Pair
   open: number | null

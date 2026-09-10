@@ -7,38 +7,35 @@ on:
     - cron: "20 22 * * 0-4"   # 07:20 KST 월–금 morning 재시도
     - cron: "9 0 * * 1-5"     # 09:09 KST 월–금 open
     - cron: "40 0 * * 1-5"    # 09:40 KST 월–금 open 재시도 (야후 시가 반영 지연 대비)
-    - cron: "30 1 * * 1-5"    # 10:30 KST 월–금 open 최종 — 이때도 시가 없으면 휴장으로 확정
+    - cron: "30 1 * * 1-5"    # 10:30 KST 월–금 open 추가 재시도
     - cron: "40 6 * * 1-5"    # 15:40 KST 월–금 close (오늘 마감 반영, 저녁 박자)
     - cron: "10 7 * * 1-5"    # 16:10 KST 월–금 close 재시도 (야후 종가 반영 지연 대비)
   workflow_dispatch:
     inputs:
-      phase: { description: morning | open | close | backfill, default: morning }
-      date: { description: "YYYY-MM-DD (재현용, 비우면 오늘)", default: "" }
+      phase:
+        description: 실행 단계 (오늘 자료는 실제 실행 시각으로 보정)
+        type: choice
+        options: [morning, open, close, backfill]
+        default: morning
+      date: { description: "YYYY-MM-DD (재현용, 비우면 오늘)", type: string, default: "" }
 permissions: { contents: write }
 concurrency: relay
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with: { ref: gh-pages, path: site }
-        continue-on-error: true
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt && playwright install --with-deps chromium
       - run: python test_missing_prices.py && python test_headline.py
-      - name: phase
-        run: |
-          S="${{ github.event.schedule }}"
-          P="${{ github.event.inputs.phase }}"
-          if [ -z "$P" ]; then case "$S" in *" 6 * * 1-5"|*" 7 * * 1-5") P=close;; *" 0 * * 1-5"|*" 1 * * 1-5") P=open;; *) P=morning;; esac; fi
-          echo "PHASE=$P" >> $GITHUB_ENV
-          if [ "$S" = "30 1 * * 1-5" ]; then echo "RELAY_FINAL=1" >> $GITHUB_ENV; fi
       - run: rm -rf site/.git && python relay.py "$PHASE"
         env:
+          PHASE: ${{ inputs.phase || 'morning' }}
           RELAY_DATE: ${{ github.event.inputs.date }}
-          RELAY_FINAL: ${{ env.RELAY_FINAL }}
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

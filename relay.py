@@ -6,7 +6,7 @@ python relay.py selfcheck # 정렬·빈도 자기검증
 """
 import json, os, sys, html, datetime as dt
 from pathlib import Path
-import shutil
+import shutil, time
 import pandas as pd, numpy as np, yfinance as yf
 from zoneinfo import ZoneInfo
 
@@ -23,12 +23,36 @@ SITE_URL = os.environ.get("SITE_URL", "https://mjs0611.github.io/kospi-relay")
 def fetch():
     out = {}
     for k, t in TICK.items():
-        h = yf.Ticker(t).history(start="2021-01-01", auto_adjust=False)
-        if h.empty:
-            raise RuntimeError(f"no data {t}")
-        h.index = h.index.tz_localize(None).normalize()
-        out[k] = h[["Open", "Close"]]
+        last = None
+        for attempt, delay in enumerate((0, 2, 5), 1):
+            if delay:
+                time.sleep(delay)
+            try:
+                h = yf.Ticker(t).history(start="2021-01-01", auto_adjust=False, timeout=15)
+                if h.empty:
+                    raise ValueError("empty history")
+                h.index = h.index.tz_localize(None).normalize()
+                if h.index.has_duplicates or h.index.hasnans:
+                    raise ValueError("invalid history dates")
+                h = h[["Open", "Close"]].apply(pd.to_numeric, errors="coerce").sort_index()
+                h = h.where(np.isfinite(h) & (h > 0))  # 행·날짜는 보존, 무효 가격만 결측 처리
+                last = h
+                if h.iloc[-1].notna().all():
+                    break
+                print(f"{t}: incomplete latest prices ({attempt}/3)")
+            except Exception as exc:  # 외부 응답 경계. 마지막 실패는 배포를 막아 기존 자료를 보존한다.
+                print(f"{t}: fetch {attempt}/3 failed: {exc}")
+        if last is None:
+            raise RuntimeError(f"no usable history for {t} after 3 attempts")
+        out[k] = last
     return out
+
+
+def change(price, base):
+    if any(x is None or not np.isfinite(x) or x <= 0 for x in (price, base)):
+        return None
+    value = price / base - 1
+    return value if np.isfinite(value) else None
 
 
 def signal(spy, soxx):
@@ -42,8 +66,10 @@ def us_window(h, P, D):
     """코스피 전일 종가 P 이후 ~ D 전날까지 미국 세션. (첫 세션 시가%, 누적 종가%, 세션 수) 또는 None."""
     win = h[(h.index >= P) & (h.index <= D - pd.Timedelta(days=1))]
     before = h[h.index < P]
-    if win.empty or before.empty:
+    if win.empty:
         return None
+    if before.empty:
+        return None, None, len(win)
     base = before.Close.iloc[-1]
     # 세션을 삭제하면 전날 종가를 최신 종가로 오인한다. 존재하지만 미완성인 밤은 따로 보존한다.
     prices = [base, win.Open.iloc[0], win.Close.iloc[-1]]
@@ -60,7 +86,7 @@ def align(raw):
         w = {k: us_window(raw[k], P, D) for k in ("SPY", "SOXX")}
         if None in w.values():
             continue
-        rows.append({"D": D, "gap": K.Open.iloc[i] / K.Close.iloc[i - 1] - 1, "s": signal(w["SPY"][1], w["SOXX"][1])})
+        rows.append({"D": D, "gap": change(K.Open.iloc[i], K.Close.iloc[i - 1]), "s": signal(w["SPY"][1], w["SOXX"][1])})
     return pd.DataFrame(rows, columns=["D", "gap", "s"]).set_index("D").replace([np.inf, -np.inf], np.nan).dropna()
 
 
@@ -69,7 +95,7 @@ def bin_of(s):
 
 
 def frequency(hist, s):
-    if not np.isfinite(s) or hist.empty:
+    if not np.isfinite(s) or not BINS[0][0] <= s < BINS[-1][1] or hist.empty:
         return {"bin": "자료 대기", "n": 0, "up": 0, "flat": 0, "down": 0, "years": 0}
     lo, hi, name = bin_of(s)
     g = hist[(hist.s >= lo) & (hist.s < hi)].gap
@@ -102,9 +128,9 @@ def headline(f, opened, status):
     if f and f["bin"] == "자료 대기":
         claim = f"코스피는 {pct(opened)}로 시작했어요" if opened is not None and status != "pending" else "자료가 채워지면 통계를 보여드릴게요"
         return {"cond": "뉴욕 자료를 기다리고 있어요", "claim": claim, "zone": zone_of(opened)}
-    if not f:   # 뉴욕 휴장(미국 공휴일). 비교할 밤이 없어도 오늘 시가는 말한다
+    if not f:   # 거래일 캘린더가 없으므로 자료 부재만으로 휴장을 단정하지 않는다.
         claim = f"코스피는 {pct(opened)}로 시작했어요" if opened is not None and status != "pending" else "비교할 밤이 없어요. 오늘 시가만 볼게요"
-        return {"cond": "지난밤 뉴욕은 휴장이었어요", "claim": claim, "zone": zone_of(opened)}
+        return {"cond": "비교할 뉴욕 자료가 없어요", "claim": claim, "zone": zone_of(opened)}
     cond = NIGHT[f["bin"]]
     if f["n"] < 30:
         return {"cond": cond, "claim": f"비슷한 밤이 {f['n']}번뿐이라 통계는 안 냈어요", "zone": zone_of(opened)}
@@ -139,7 +165,7 @@ def ny_svg(us):
     o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
     vals = [us[k][1] for k in US if us.get(k) and us[k][1] is not None]
     if not any(us.get(k) for k in US):
-        o.append('<text x="0" y="46" fill="var(--muted)">뉴욕은 휴장이었어요</text>')
+        o.append('<text x="0" y="46" fill="var(--muted)">비교할 뉴욕 자료가 없어요</text>')
     else:
         # 호가창처럼 길이 = 크기, 색 = 방향. 음수를 왼쪽으로 뻗게 하면 라벨을 침범한다(9/7 카드에서 확인)
         x0, unit = 76, 100 / max(0.005, max((abs(v) for v in vals), default=0))   # 막대 시작 x, 최대 막대 100px
@@ -164,13 +190,13 @@ def kr_svg(f, opened, status):
     W, H = 320, 100
     o = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)" font-size="12">']
     if not f or f["n"] < 30:   # f 없음 = 뉴욕 휴장(미국 공휴일), 있어도 30 미만 = 표본 부족. 오늘 시가는 그래도 찍는다
-        note = "뉴욕이 쉰 밤은 통계를 안 내요" if not f else "자료가 채워지면 통계를 보여드릴게요" if f.get("bin") == "자료 대기" else "비슷한 밤이 적어 통계는 안 냈어요"
+        note = "비교할 뉴욕 자료가 없어 통계는 안 내요" if not f else "자료가 채워지면 통계를 보여드릴게요" if f.get("bin") == "자료 대기" else "비슷한 밤이 적어 통계는 안 냈어요"
         o.append(f'<text x="0" y="40" fill="var(--muted)">{note}</text>')
         if opened is not None and status in ("filled", "done"):
             c = color(opened)
             o.append(f'<text x="0" y="76"><tspan fill="var(--muted)">오늘 시가 </tspan><tspan font-weight="800" font-size="14" fill="{c}">{pct(opened)}</tspan></text>')
         elif status == "pending":
-            o.append(f'<text x="0" y="76" fill="var(--muted)" font-size="11">오늘 시가는 9시에 나와요</text>')
+            o.append(f'<text x="0" y="76" fill="var(--muted)" font-size="11">오늘 시가는 9시 이후 자료가 오면 표시해요</text>')
         o.append("</svg>"); return "\n".join(o)
     n = f["n"]; bx, bmax = 82, 120   # 막대 시작 x, 100% = 120px
     z_today = zone_of(opened) if status in ("filled", "done") and opened is not None else None
@@ -184,24 +210,26 @@ def kr_svg(f, opened, status):
         if z == z_today:
             o.append(f'<text x="{W}" y="{y + 4}" text-anchor="end" fill="var(--ink)"><tspan fill="var(--muted)">오늘 </tspan><tspan font-weight="800" font-size="14" fill="{c}">{pct(opened)}</tspan></text>')
     if z_today is None:
-        o.append(f'<text x="{W}" y="{H - 2}" text-anchor="end" fill="var(--muted)" font-size="11">{"오늘 시가는 9시에 나와요" if status == "pending" else "오늘은 휴장이에요"}</text>')
+        o.append(f'<text x="{W}" y="{H - 2}" text-anchor="end" fill="var(--muted)" font-size="11">{"오늘 시가는 9시 이후 자료가 오면 표시해요" if status == "pending" else "오늘은 휴장이에요"}</text>')
     o.append("</svg>")
     return "\n".join(o)
 
 
 def today_nodes(raw, D):
     K, Q = raw["KOSPI"], raw["KOSDAQ"]
-    P = K.index[K.index < D][-1]
-    prev = {"date": P, "kospi": K.Close[P] / K.Close[K.index[K.index < P][-1]] - 1,
-            "kosdaq": Q.Close[P] / Q.Close[Q.index[Q.index < P][-1]] - 1 if P in Q.index else None}
+    past = K.index[K.index < D]
+    if len(past) < 2:
+        raise RuntimeError("KOSPI history needs two prior sessions; preserving published data")
+    P = past[-1]
+    qpast = Q.index[Q.index < P]
+    prev = {"date": P, "kospi": change(K.Close[P], K.Close[past[-2]]),
+            "kosdaq": change(Q.Close[P], Q.Close[qpast[-1]]) if P in Q.index and len(qpast) else None}
     us = {k: us_window(raw[k], P, D) for k in US}
     vix = us_window(raw["VIX"], P, D)
     vwin = raw["VIX"][(raw["VIX"].index >= P) & (raw["VIX"].index <= D - pd.Timedelta(days=1))]
     vix_lv = (raw["VIX"][raw["VIX"].index < P].Close.iloc[-1], vwin.Close.iloc[-1]) if vix and vix[1] is not None else None
-    opened = K.Open[D] / K.Close[P] - 1 if D in K.index else None
-    closed_pct = K.Close[D] / K.Close[P] - 1 if D in K.index else None   # 장중엔 현재가. close 단계에서만 믿는다
-    opened = opened if opened is not None and np.isfinite(opened) else None
-    closed_pct = closed_pct if closed_pct is not None and np.isfinite(closed_pct) else None
+    opened = change(K.Open[D], K.Close[P]) if D in K.index else None
+    closed_pct = change(K.Close[D], K.Close[P]) if D in K.index else None   # 장중엔 현재가. close 단계에서만 믿는다
     return prev, us, vix_lv, opened, closed_pct
 
 
@@ -280,35 +308,78 @@ document.querySelector('.share').addEventListener('click', async function () {{
 
 
 # ---------- pipeline ----------
+def current_phase(now):
+    hm = (now.hour, now.minute)
+    return "close" if hm >= (15, 40) else "open" if hm >= (9, 0) else "morning"
+
+
+def preserve_day(previous, prev, us, vix_lv, opened, closed_pct):
+    """같은 날짜의 게시물 보호. 기준 거래일이 후퇴하면 발행하지 않는다."""
+    old_basis = previous.get("prev", {}).get("date", "")
+    if old_basis > f"{prev['date']:%Y-%m-%d}":
+        print("::warning::Previously known KOSPI session missing; preserving publication")
+        return None
+    if old_basis == f"{prev['date']:%Y-%m-%d}":
+        # 같은 날짜·같은 기준일의 확인된 값만 재사용한다. 서로 다른 기준의 수익률은 섞지 않는다.
+        for k, w in us.items():
+            old = previous.get("us", {}).get(k)
+            if (not w or w[1] is None) and old and all(np.isfinite(old)):
+                us[k] = tuple(old)
+                print(f"::warning::{k}: reusing verified same-day prices")
+        for k in ("kospi", "kosdaq"):
+            if prev[k] is None:
+                prev[k] = previous["prev"].get(k)
+        if opened is None:
+            opened = previous.get("open")
+        if previous.get("status") == "done" and closed_pct is None:
+            closed_pct = previous.get("close")
+        if vix_lv is None:
+            vix_lv = previous.get("vix")
+    return prev, us, vix_lv, opened, closed_pct
+
+
 def build(phase):
     now = dt.datetime.now(KST); D = pd.Timestamp(os.environ.get("RELAY_DATE") or now.date())  # RELAY_DATE=YYYY-MM-DD 로컬 재현용
-    if phase == "morning" and not os.environ.get("RELAY_DATE") and now.hour >= 9:
-        phase = "close" if now.hour >= 15 else "open"   # 아침 단계를 낮·밤에 돌리면 오늘 시가·마감을 pending으로 덮는다. 실수 방어
-        print("morning after 09:00 → downgraded to", phase)
+    if D > pd.Timestamp(now.date()):
+        raise ValueError("Cannot publish a future date")
+    if D == pd.Timestamp(now.date()):
+        phase = current_phase(now)  # 지연된 open도 마감 이후에는 close. 장중 현재가를 마감으로 표시하지 않는다.
+    previous = json.loads((SITE / "latest.json").read_text()) if (SITE / "latest.json").exists() else {}
+    if previous.get("date", "") > f"{D:%Y-%m-%d}":
+        print("::warning::Older run skipped; preserving newer publication")
+        return
     raw = fetch()
+    if previous.get("status") in ("filled", "done") and pd.Timestamp(previous["date"]) not in raw["KOSPI"].index:
+        print("::warning::Previously published KOSPI session missing; preserving publication")
+        return
     hist = align(raw)
     prev, us, vix_lv, opened, closed_pct = today_nodes(raw, D)
     if phase == "morning":
         opened = None            # 아침엔 시가 노드 비움 (과거 날짜 재현 시에도)
     if phase != "close":
         closed_pct = None        # 장중 야후 일봉의 Close는 현재가. 마감 단계에서만 쓴다
+    saved = previous if previous.get("date") == f"{D:%Y-%m-%d}" else {}
+    nodes = preserve_day(saved, prev, us, vix_lv, opened, closed_pct)
+    if nodes is None:
+        return
+    prev, us, vix_lv, opened, closed_pct = nodes
     f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1])) if us.get("SPY") and us.get("SOXX") else None
-    # open 단계에 시가가 없어도 휴장으로 단정하지 않는다 — 야후 반영이 09:09보다 늦을 수 있다.
-    # 재시도 크론이 뒤따르고, 마지막 크론(RELAY_FINAL=1)에서만 휴장으로 확정한다.
-    if phase == "morning": status = "pending"
-    elif opened is None: status = "closed" if os.environ.get("RELAY_FINAL") else "pending"
+    # 휴장 캘린더 없이 자료 부재를 휴장으로 확정하지 않는다. 확인된 시가·마감은 후속 작업에서도 보존한다.
+    if opened is None: status = "pending"
     elif closed_pct is not None: status = "done"     # 15:40 마감 반영
     else: status = "filled"
+    if f and f["bin"] == "자료 대기":
+        print("::warning::Overnight prices incomplete; publishing explicit waiting state")
     tail = tail_text(status, closed_pct, us_hours(D)[0])
     prev_link = f"{prev['date']:%Y-%m-%d}" if (SITE / f"{prev['date']:%Y-%m-%d}").exists() else None
-    day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
-    (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail), encoding="utf-8")
-    # 루트도 그날 날짜 PNG를 가리킨다. /relay.png 고정 URL이면 카톡이 며칠 전 미리보기를 캐시로 재사용한다
-    (SITE / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail).replace('href="../', 'href="./'), encoding="utf-8")
     payload = json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
         "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
         "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
         "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float, allow_nan=False)
+    day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
+    (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail), encoding="utf-8")
+    # 루트도 그날 날짜 PNG를 가리킨다. /relay.png 고정 URL이면 카톡이 며칠 전 미리보기를 캐시로 재사용한다
+    (SITE / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail).replace('href="../', 'href="./'), encoding="utf-8")
     (SITE / "latest.json").write_text(payload, encoding="utf-8")
     (SITE / "days").mkdir(exist_ok=True); (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(payload, encoding="utf-8")
     write_index()
@@ -330,16 +401,23 @@ def write_index():
 
 def backfill(n):
     raw = fetch(); hist = align(raw); K = raw["KOSPI"]
-    for D in K.index[-n:]:
-        prev, us, vix_lv, opened, closed_pct = today_nodes(raw, D)
+    for D in K.index[K.index < pd.Timestamp(dt.datetime.now(KST).date())][-n:]:
+        archive = SITE / "days" / f"{D:%Y-%m-%d}.json"
+        previous = json.loads(archive.read_text()) if archive.exists() else {}
+        saved = previous if previous.get("date") == f"{D:%Y-%m-%d}" else {}
+        nodes = preserve_day(saved, *today_nodes(raw, D))
+        if nodes is None:
+            continue
+        prev, us, vix_lv, opened, closed_pct = nodes
         f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1])) if us.get("SPY") and us.get("SOXX") else None
+        status = "done" if closed_pct is not None else "filled" if opened is not None else "pending"
         day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
-        (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, "done", None, None), encoding="utf-8")
+        (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, None, None), encoding="utf-8")
         screenshot(day / "index.html", day / "relay.png")
         (SITE / "days").mkdir(exist_ok=True)
-        (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": "done", "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
+        (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
             "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": None, "freq": f,
-            "head": headline(f, opened, "done"), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, "done")}, ensure_ascii=False, default=float, allow_nan=False), encoding="utf-8")
+            "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status)}, ensure_ascii=False, default=float, allow_nan=False), encoding="utf-8")
     write_index()
     print("backfilled", n)
 
