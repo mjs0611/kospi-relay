@@ -169,7 +169,35 @@ def check():
     print("missing prices ok")
 
 
+def check_restore():
+    """직전 세션이 상류에서 빠져도 발행분으로 복원해 새 날을 발행한다. 같은 날짜·미확정은 보존."""
+    dates = r.pd.to_datetime(["2026-09-03", "2026-09-04", "2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10"])
+    prices = r.pd.DataFrame({"Open": [100, 101, 102, 103, 104, 105], "Close": [101, 102, 103, 104, 105, 106]}, index=dates, dtype=float)
+    raw = {k: prices.copy() for k in r.TICK}
+    raw["KOSPI"] = prices.drop(dates[-2])  # 9/9 세션이 야후에서 사라진 아침
+    published = {"date": "2026-09-09", "status": "done", "prev": {"date": "2026-09-08", "kospi": 0.01, "kosdaq": 0.01}, "open": 0.0, "close": 105 / 104 - 1}
+
+    def screenshot(_, png):
+        png.write_bytes(b"test")
+
+    with tempfile.TemporaryDirectory() as tmp, patch.object(r, "SITE", Path(tmp)), patch.object(r, "fetch", return_value=raw), patch.object(r, "screenshot", side_effect=screenshot), patch.dict(r.os.environ, {"RELAY_DATE": "2026-09-10"}):
+        (Path(tmp) / "latest.json").write_text(json.dumps(published))
+        r.build("morning")
+        day = json.loads((Path(tmp) / "latest.json").read_text())
+        assert day["date"] == "2026-09-10" and day["prev"]["date"] == "2026-09-09" and day["status"] == "pending"
+        assert abs(day["prev"]["kospi"] - (105 / 104 - 1)) < 1e-9  # 복원된 9/9 종가로 전일 노드 계산
+        # 같은 날짜 발행분이 빠진 경우와 마감 미확정(filled)은 기존대로 보존
+        for stale in ({**published, "date": "2026-09-10"}, {**published, "status": "filled", "close": None}):
+            (Path(tmp) / "latest.json").write_text(json.dumps(stale))
+            raw["KOSPI"] = prices.drop(dates[-1] if stale["date"] == "2026-09-10" else dates[-2])
+            r.build("morning")
+            assert json.loads((Path(tmp) / "latest.json").read_text()) == stale
+    assert r.restore_session(prices.drop(dates[-2]), {**published, "prev": {"date": "2026-09-01"}}) is None  # 기준일 없음
+    print("restore session ok")
+
+
 if __name__ == "__main__":
     with patch.object(r.dt, "datetime", Clock), contextlib.redirect_stdout(io.StringIO()):
         check()
+        check_restore()
     print("missing prices ok")

@@ -338,6 +338,19 @@ def preserve_day(previous, prev, us, vix_lv, opened, closed_pct):
     return prev, us, vix_lv, opened, closed_pct
 
 
+def restore_session(K, previous):
+    """발행분(open·close = 기준일 종가 대비 %)으로 상류에서 사라진 세션 한 개를 복원. 마감 확정(done)·기준일 존재·수치 유효일 때만."""
+    day, basis = pd.Timestamp(previous["date"]), pd.Timestamp(previous.get("prev", {}).get("date") or "1970-01-01")
+    o, c = previous.get("open"), previous.get("close")
+    if previous.get("status") != "done" or basis not in K.index or not all(isinstance(x, (int, float)) and np.isfinite(x) for x in (o, c)):
+        return None
+    base = K.Close[basis]
+    if not np.isfinite(base) or base <= 0:
+        return None
+    row = pd.DataFrame({"Open": [base * (1 + o)], "Close": [base * (1 + c)]}, index=[day])
+    return pd.concat([K, row]).sort_index()
+
+
 def build(phase):
     now = dt.datetime.now(KST); D = pd.Timestamp(os.environ.get("RELAY_DATE") or now.date())  # RELAY_DATE=YYYY-MM-DD 로컬 재현용
     if D > pd.Timestamp(now.date()):
@@ -350,8 +363,13 @@ def build(phase):
         return
     raw = fetch()
     if previous.get("status") in ("filled", "done") and pd.Timestamp(previous["date"]) not in raw["KOSPI"].index:
-        print("::warning::Previously published KOSPI session missing; preserving publication")
-        return
+        # 상류(야후)가 직전 세션을 늦게 주는 아침엔 발행분에서 그 세션을 복원해 새 날을 발행한다. 같은 날짜 재실행·마감 미확정은 기존대로 보존 (2026-09-17: 9/16 결측이 9/17 카드를 통째로 막았다)
+        restored = restore_session(raw["KOSPI"], previous) if pd.Timestamp(previous["date"]) < D else None
+        if restored is None:
+            print("::warning::Previously published KOSPI session missing; preserving publication")
+            return
+        raw["KOSPI"] = restored
+        print(f"::warning::KOSPI {previous['date']} missing upstream; restored from published open/close")
     hist = align(raw)
     prev, us, vix_lv, opened, closed_pct = today_nodes(raw, D)
     if phase == "morning":
