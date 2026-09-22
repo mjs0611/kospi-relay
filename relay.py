@@ -370,13 +370,22 @@ def build(phase):
             return
         raw["KOSPI"] = restored
         print(f"::warning::KOSPI {previous['date']} missing upstream; restored from published open/close")
+    saved = previous if previous.get("date") == f"{D:%Y-%m-%d}" else {}
+    basis = saved.get("prev", {}).get("date")
+    if basis and pd.Timestamp(basis) not in raw["KOSPI"].index:
+        # 같은 날 뒷단계도 아침에 확인한 기준 세션을 날짜별 마감 확정 게시본에서 복원한다.
+        archive = SITE / "days" / f"{basis}.json"
+        published = json.loads(archive.read_text()) if archive.exists() else {}
+        restored = restore_session(raw["KOSPI"], published) if published.get("date") == basis else None
+        if restored is not None:
+            raw["KOSPI"] = restored
+            print(f"::warning::KOSPI {basis} missing upstream; restored from published open/close")
     hist = align(raw)
     prev, us, vix_lv, opened, closed_pct = today_nodes(raw, D)
     if phase == "morning":
         opened = None            # 아침엔 시가 노드 비움 (과거 날짜 재현 시에도)
     if phase != "close":
         closed_pct = None        # 장중 야후 일봉의 Close는 현재가. 마감 단계에서만 쓴다
-    saved = previous if previous.get("date") == f"{D:%Y-%m-%d}" else {}
     nodes = preserve_day(saved, prev, us, vix_lv, opened, closed_pct)
     if nodes is None:
         return

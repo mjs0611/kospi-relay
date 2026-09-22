@@ -196,8 +196,55 @@ def check_restore():
     print("restore session ok")
 
 
+def check_restore_same_day():
+    """같은 날 open·close도 날짜별 마감 게시본으로 누락된 기준일을 복원한다."""
+    dates = r.pd.to_datetime(["2026-09-15", "2026-09-16", "2026-09-17", "2026-09-18", "2026-09-21", "2026-09-22"])
+    prices = r.pd.DataFrame({"Open": [100, 101, 102, 103, 106, 109], "Close": [101, 102, 103, 104, 108, 110]}, index=dates, dtype=float)
+    published = {"date": "2026-09-21", "status": "done", "prev": {"date": "2026-09-18"}, "open": 106 / 104 - 1, "close": 108 / 104 - 1}
+    previous = {"date": "2026-09-22", "status": "pending", "prev": {"date": "2026-09-21"}, "open": None, "close": None}
+    rejected = [None, {**published, "status": "pending"}, {**published, "status": "filled"}, {**published, "date": "2026-09-18"}]
+
+    def screenshot(_, png):
+        png.write_bytes(b"test")
+
+    for phase, hour, minute, expected in [("open", 9, 6, "filled"), ("close", 15, 40, "done")]:
+        for archive_day in [published, *rejected]:
+            raw = {k: prices.copy() for k in r.TICK}
+            raw["KOSPI"] = prices.drop(dates[-2])
+            with tempfile.TemporaryDirectory() as tmp, patch.object(r, "SITE", Path(tmp)), patch.object(r, "fetch", return_value=raw), patch.object(r, "screenshot", side_effect=screenshot) as render, patch.dict(r.os.environ, {"RELAY_DATE": previous["date"]}), patch.object(r.dt, "datetime", Clock), patch.object(Clock, "at", Clock(2026, 9, 22, hour, minute, tzinfo=r.KST)):
+                latest = Path(tmp) / "latest.json"
+                latest.write_text(json.dumps(previous))
+                snapshot = latest.read_bytes()
+                archive = Path(tmp) / "days/2026-09-21.json"
+                if archive_day is not None:
+                    archive.parent.mkdir()
+                    archive.write_text(json.dumps(archive_day))
+                with contextlib.redirect_stdout(io.StringIO()) as output:
+                    r.build(phase)
+                if archive_day != published:
+                    assert "::warning::Previously known KOSPI session missing; preserving publication" in output.getvalue()
+                    assert latest.read_bytes() == snapshot
+                    render.assert_not_called()
+                    continue
+                day = json.loads(latest.read_text())
+                assert day["status"] == expected, day
+                assert day["date"] == previous["date"] and day["prev"]["date"] == published["date"]
+                assert abs(day["prev"]["kospi"] - published["close"]) < 1e-9
+                assert abs(day["open"] - (109 / 108 - 1)) < 1e-9  # 9/18 종가 104가 아닌 복원된 9/21 종가 108 대비
+                if phase == "close":
+                    assert abs(day["close"] - (110 / 108 - 1)) < 1e-9
+                else:
+                    assert day["close"] is None
+                assert "KOSPI 2026-09-21 missing upstream; restored from published open/close" in output.getvalue()
+                assert (Path(tmp) / "days/2026-09-22.json").read_bytes() == latest.read_bytes()
+                assert json.loads(archive.read_text()) == published
+                render.assert_called_once()
+    print("same-day restore ok")
+
+
 if __name__ == "__main__":
     with patch.object(r.dt, "datetime", Clock), contextlib.redirect_stdout(io.StringIO()):
         check()
         check_restore()
+        check_restore_same_day()
     print("missing prices ok")
