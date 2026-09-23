@@ -132,7 +132,7 @@ def zone_of(x):
     return None if x is None else ("up" if x > FLAT else "down" if x < -FLAT else "flat")
 
 
-def headline(f, opened, status):
+def headline(f, opened, status, source_states=None):
     """카드 제목 두 줄. cond = 조건('지난밤 뉴욕이 크게 올랐어요'), claim = 규칙('코스피는 10번 중 8번 올라서 시작했어요').
     오늘 시가는 제목이 아니라 그림의 마커가 말한다. 예측 아님, 과거 빈도 서술만. 말투는 해요체."""
     if f and f["bin"] == "자료 대기":
@@ -141,16 +141,16 @@ def headline(f, opened, status):
     if not f:   # 거래일 캘린더가 없으므로 자료 부재만으로 휴장을 단정하지 않는다.
         claim = f"코스피는 {pct(opened)}로 시작했어요" if opened is not None and status != "pending" else "비교할 밤이 없어요. 오늘 시가만 볼게요"
         return {"cond": "비교할 뉴욕 자료가 없어요", "claim": claim, "zone": zone_of(opened)}
-    cond = NIGHT[f["bin"]]
+    cond = "이전에 확인한 뉴욕 자료예요" if 'reused' in (source_states or {}).values() else NIGHT[f["bin"]]
     if f["n"] < 30:
         return {"cond": cond, "claim": f"비슷한 밤이 {f['n']}번뿐이라 통계는 안 냈어요", "zone": zone_of(opened)}
     maj = max(("up", "down", "flat"), key=lambda z: f[z])
     return {"cond": cond, "claim": f"코스피는 {tenths(f[maj] / f['n'])} {WENT[maj]}", "zone": maj}
 
 
-def sentence(f):
+def sentence(f, source_states=None):
     """공유·텔레그램·OG 한 문장 = 제목 두 줄을 이은 것."""
-    h = headline(f, None, "pending")
+    h = headline(f, None, "pending", source_states)
     return f"{h['cond']}. {h['claim']}" if h["claim"] else h["cond"]
 
 
@@ -270,12 +270,12 @@ def pending_text(status):
     return "09:00에 채워진다" if status == "pending" else ("오늘 휴장" if status == "closed" else "")
 
 
-def page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None, og_image=None, source_note=None):
+def page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None, og_image=None, source_note=None, source_states=None):
     date_ko = f"{D.month}월 {D.day}일 {'월화수목금토일'[D.weekday()]}요일"
     stamp_t = {"pending": "자료 대기", "done": "마감 반영"}.get(status, "시가 반영")
     pending = pending_text(status)
     ny, kr = ny_svg(us), kr_svg(f, opened, status)
-    head = headline(f, opened, status)
+    head = headline(f, opened, status, source_states)
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>밤사이 코스피 · {D:%Y-%m-%d}</title>
 <meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
@@ -304,8 +304,8 @@ footer a{{color:#2C5FD6}}
 .share{{margin-left:10px;border:1px solid #CFD5DE;background:#FFF;color:#10172A;border-radius:6px;padding:4px 10px;font:600 11px var(--sans);cursor:pointer}}
 @media (max-width:480px){{.sheet{{grid-template-columns:1fr}}.cond{{margin-top:18px}}.claim{{margin-top:4px}}}}
 </style></head><body><div class="sheet">
-<section class="night"><p class="brand">밤사이 코스피</p>{head_html(headline(f, opened, status))[0]}<p class="lab">밤사이 뉴욕</p>{ny}</section>
-<section class="day"><p class="stamp">{date_ko} <b>{stamp_t}</b></p>{head_html(headline(f, opened, status))[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}{f'<p class="tail">{html.escape(tail)}</p>' if tail else ''}{f'<p class="cap">{html.escape(source_note)}</p>' if source_note else ''}</section>
+<section class="night"><p class="brand">밤사이 코스피</p>{head_html(head)[0]}<p class="lab">뉴욕 지표</p>{ny}</section>
+<section class="day"><p class="stamp">{date_ko} <b>{stamp_t}</b></p>{head_html(head)[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}{f'<p class="tail">{html.escape(tail)}</p>' if tail else ''}{f'<p class="cap">{html.escape(source_note)}</p>' if source_note else ''}</section>
 <footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}<button class="share" type="button">공유</button></span></footer>
 <script>
 /* 공유: Web Share가 있으면 시스템 공유 시트, 없으면 링크 복사. 링크는 이 날짜 페이지(OG 카드 붙음) */
@@ -420,12 +420,12 @@ def build(phase):
         f"{k} {source_dates[k] or '기준일 미확인'}" + (' (기존 게시값)' if source_states[k] == 'reused' else '') for k in US)
     payload = json.dumps({"source_states": source_states, "source_dates": source_dates, "source_note": source_note, "date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
         "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
-        "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
+        "head": headline(f, opened, status, source_states), "sentence": sentence(f, source_states) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
         "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float, allow_nan=False)
     day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
-    (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail, source_note=source_note), encoding="utf-8")
+    (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail, source_note=source_note, source_states=source_states), encoding="utf-8")
     # 루트도 그날 날짜 PNG를 가리킨다. /relay.png 고정 URL이면 카톡이 며칠 전 미리보기를 캐시로 재사용한다
-    (SITE / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail, source_note=source_note).replace('href="../', 'href="./'), encoding="utf-8")
+    (SITE / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail, source_note=source_note, source_states=source_states).replace('href="../', 'href="./'), encoding="utf-8")
     (SITE / "latest.json").write_text(payload, encoding="utf-8")
     (SITE / "days").mkdir(exist_ok=True); (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(payload, encoding="utf-8")
     write_index()

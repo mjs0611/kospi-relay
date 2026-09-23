@@ -13,7 +13,7 @@ export default function Relay({ day }: { day: RelayDay }) {
       <section className="night">
         <p className="brand">밤사이 코스피</p>
         {day.head && <p className="cond">{day.head.cond}</p>}
-        <p className="lab">밤사이 뉴욕</p>
+        <p className="lab">뉴욕 지표</p>
         {day.ny && <div className="ny" dangerouslySetInnerHTML={{ __html: day.ny }} />}
       </section>
       <section className="day">

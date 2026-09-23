@@ -20,6 +20,9 @@ h = headline({"n": 10, "up": 5, "flat": 3, "down": 2, "bin": "상승", "years": 
 h = headline(None, None, "pending"); assert h["cond"] == "비교할 뉴욕 자료가 없어요" and "오늘 시가만" in h["claim"]
 h = headline(None, 0.0072, "done"); assert h["claim"] == "코스피는 +0.72%로 시작했어요" and h["zone"] == "up"
 assert sentence(fu) == "지난밤 뉴욕이 크게 올랐어요. 코스피는 10번 중 8번 올라서 시작했어요"
+assert headline(fu, None, "pending", {"SPY": "reused"})["cond"] == "이전에 확인한 뉴욕 자료예요"
+assert sentence(fu, {"SPY": "reused"}).startswith("이전에 확인한 뉴욕 자료예요.")
+assert headline(fu, None, "pending", {"SPY": "fresh"}) == headline(fu, None, "pending")
 assert "올라서" in sentence(fu)                                  # relay.py selfcheck와 같은 계약
 assert zone_of(FLAT) == "flat" and zone_of(FLAT + 1e-9) == "up" and zone_of(-FLAT - 1e-9) == "down"
 for s_ in (sentence(f), sentence(fu), h["cond"]):
