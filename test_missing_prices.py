@@ -100,6 +100,8 @@ def check():
         r.build("morning")
         recovered = json.loads(latest.read_text())
         assert recovered["status"] == "done"
+        assert recovered["source_states"]["SPY"] == "reused"
+        assert recovered["source_dates"]["SPY"] == good["source_dates"]["SPY"]
         for key in ("us", "open", "close"):
             assert recovered[key] == good[key], key
         r.backfill(1)

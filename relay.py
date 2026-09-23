@@ -397,6 +397,7 @@ def build(phase):
         opened = None            # 아침엔 시가 노드 비움 (과거 날짜 재현 시에도)
     if phase != "close":
         closed_pct = None        # 장중 야후 일봉의 Close는 현재가. 마감 단계에서만 쓴다
+    observed_us = dict(us)
     nodes = preserve_day(saved, prev, us, vix_lv, opened, closed_pct)
     if nodes is None:
         return
@@ -410,9 +411,14 @@ def build(phase):
         print("::warning::Overnight prices incomplete; publishing explicit waiting state")
     tail = tail_text(status, closed_pct, us_hours(D)[0])
     prev_link = f"{prev['date']:%Y-%m-%d}" if (SITE / f"{prev['date']:%Y-%m-%d}").exists() else None
-    source_dates = {k: (f"{raw[k].index[raw[k].index < D][-1]:%Y-%m-%d}" if len(raw[k].index[raw[k].index < D]) else None) for k in US}
-    source_note = "뉴욕 자료 기준 · " + " · ".join(f"{k} {value or '미확보'}" for k, value in source_dates.items())
-    payload = json.dumps({"source_dates": source_dates, "source_note": source_note, "date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
+    source_states = {k: ('missing' if not us.get(k) or us[k][1] is None else
+                         'fresh' if observed_us.get(k) and observed_us[k][1] is not None else 'reused') for k in US}
+    source_dates = {k: (f"{raw[k].index[raw[k].index < D][-1]:%Y-%m-%d}" if source_states[k] == 'fresh'
+                        else saved.get('source_dates', {}).get(k) if source_states[k] == 'reused' and saved.get('source_states', {}).get(k) in ('fresh', 'reused') else None) for k in US}
+    source_note = "뉴욕 자료 기준 · " + " · ".join(
+        f"{k} 자료 대기" if source_states[k] == 'missing' else
+        f"{k} {source_dates[k] or '기준일 미확인'}" + (' (기존 게시값)' if source_states[k] == 'reused' else '') for k in US)
+    payload = json.dumps({"source_states": source_states, "source_dates": source_dates, "source_note": source_note, "date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
         "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
         "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
         "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float, allow_nan=False)
