@@ -22,5 +22,6 @@ export interface RelayDay {
   sentence: string | null
   ny?: string                  // 밤사이 뉴욕 SVG
   kr?: string                  // 다음 날 코스피 시가 SVG
+  source_note?: string
   built_at?: string
 }

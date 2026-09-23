@@ -25,6 +25,16 @@ def check():
     raw = {k: prices.copy() for k in r.TICK}
     D, P = dates[-1], dates[-2]
     baseline = r.align(raw)
+    # A missing whole session in one US series must not turn an older close into today's close.
+    missing = {k: prices.copy() for k in r.TICK}
+    missing['SPY'] = prices.drop(P)
+    assert r.today_nodes(missing, D)[1]['SPY'][1] is None
+    assert D not in r.align(missing).index
+    # A date absent from every US series is not invented (weekend/holiday remains unknown).
+    for k in (*r.US, 'VIX'):
+        missing[k] = prices.drop(P)
+    assert P not in r.known_us_sessions(missing)['SPY'].index
+
     for bad in (r.np.nan, r.np.inf, 0.0):
         for k in (*r.US, "VIX"):
             raw[k].loc[P, "Close"] = bad

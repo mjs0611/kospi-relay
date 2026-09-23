@@ -1,0 +1,291 @@
+{
+  "evaluated_at": "2026-09-23T22:31:28.732876+09:00",
+  "source_snapshot": "docs/evaluation-20260923",
+  "exclusions": "Current KST day, missing/invalid endpoint prices and missing known peer sessions are excluded by align(). Raw CSVs preserved for audit.",
+  "source": "yfinance unadjusted daily Open/Close",
+  "formula": "0.4 * (SPY + SOXX) / 2",
+  "target": "KOSPI open / previous KOSPI session close - 1",
+  "interpretation": "Historical description; no trading recommendation. Post-selection sample may be too small.",
+  "results": {
+    "exploratory_history": {
+      "fixed_formula": {
+        "n": 1348,
+        "mae_percentage_points": 0.5378097495888572,
+        "direction_accuracy": 0.755192878338279,
+        "coverage_at_0_3pct": 0.5964391691394659,
+        "selected_n": 804,
+        "selected_direction_accuracy": 0.8482587064676617
+      },
+      "zero_gap": {
+        "n": 1348,
+        "mae_percentage_points": 0.6919055664006036,
+        "direction_accuracy": 0.002225519287833828,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 1348,
+        "mae_percentage_points": 0.5427313091693543,
+        "direction_accuracy": 0.7537091988130564,
+        "coverage_at_0_3pct": 0.3939169139465875,
+        "selected_n": 531,
+        "selected_direction_accuracy": 0.8870056497175142
+      },
+      "start": "2021-01-06",
+      "end": "2026-09-21"
+    },
+    "after_original_selection": {
+      "fixed_formula": {
+        "n": 9,
+        "mae_percentage_points": 1.4359423207191413,
+        "direction_accuracy": 0.7777777777777778,
+        "coverage_at_0_3pct": 0.6666666666666666,
+        "selected_n": 6,
+        "selected_direction_accuracy": 0.8333333333333334
+      },
+      "zero_gap": {
+        "n": 9,
+        "mae_percentage_points": 1.629037648388497,
+        "direction_accuracy": 0.0,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 9,
+        "mae_percentage_points": 1.5720563815362572,
+        "direction_accuracy": 0.5555555555555556,
+        "coverage_at_0_3pct": 0.2222222222222222,
+        "selected_n": 2,
+        "selected_direction_accuracy": 0.5
+      },
+      "start": "2026-09-07",
+      "end": "2026-09-21"
+    },
+    "single_us_session": {
+      "fixed_formula": {
+        "n": 1289,
+        "mae_percentage_points": 0.5319826913424494,
+        "direction_accuracy": 0.752521334367727,
+        "coverage_at_0_3pct": 0.5872769588828549,
+        "selected_n": 757,
+        "selected_direction_accuracy": 0.8441215323645971
+      },
+      "zero_gap": {
+        "n": 1289,
+        "mae_percentage_points": 0.6804531289545149,
+        "direction_accuracy": 0.0023273855702094647,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 1289,
+        "mae_percentage_points": 0.5372621176856442,
+        "direction_accuracy": 0.7494181536074477,
+        "coverage_at_0_3pct": 0.3847944142746315,
+        "selected_n": 496,
+        "selected_direction_accuracy": 0.8870967741935484
+      },
+      "start": "2021-01-06",
+      "end": "2026-09-21"
+    },
+    "multiple_us_sessions": {
+      "fixed_formula": {
+        "n": 59,
+        "mae_percentage_points": 0.6651161577180013,
+        "direction_accuracy": 0.8135593220338984,
+        "coverage_at_0_3pct": 0.7966101694915254,
+        "selected_n": 47,
+        "selected_direction_accuracy": 0.9148936170212766
+      },
+      "zero_gap": {
+        "n": 59,
+        "mae_percentage_points": 0.942112208231251,
+        "direction_accuracy": 0.0,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 59,
+        "mae_percentage_points": 0.6622192383643062,
+        "direction_accuracy": 0.847457627118644,
+        "coverage_at_0_3pct": 0.5932203389830508,
+        "selected_n": 35,
+        "selected_direction_accuracy": 0.8857142857142857
+      },
+      "start": "2021-02-15",
+      "end": "2026-08-18"
+    },
+    "2021": {
+      "fixed_formula": {
+        "n": 238,
+        "mae_percentage_points": 0.30443498470722424,
+        "direction_accuracy": 0.7899159663865546,
+        "coverage_at_0_3pct": 0.5126050420168067,
+        "selected_n": 122,
+        "selected_direction_accuracy": 0.8934426229508197
+      },
+      "zero_gap": {
+        "n": 238,
+        "mae_percentage_points": 0.2707422141886319,
+        "direction_accuracy": 0.0,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 238,
+        "mae_percentage_points": 0.22441920393468823,
+        "direction_accuracy": 0.773109243697479,
+        "coverage_at_0_3pct": 0.36134453781512604,
+        "selected_n": 86,
+        "selected_direction_accuracy": 0.9302325581395349
+      },
+      "start": "2021-01-06",
+      "end": "2021-12-30"
+    },
+    "2022": {
+      "fixed_formula": {
+        "n": 235,
+        "mae_percentage_points": 0.4088493642447406,
+        "direction_accuracy": 0.774468085106383,
+        "coverage_at_0_3pct": 0.7489361702127659,
+        "selected_n": 176,
+        "selected_direction_accuracy": 0.8465909090909091
+      },
+      "zero_gap": {
+        "n": 235,
+        "mae_percentage_points": 0.6406313354141712,
+        "direction_accuracy": 0.00851063829787234,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 235,
+        "mae_percentage_points": 0.37878649849318025,
+        "direction_accuracy": 0.7702127659574468,
+        "coverage_at_0_3pct": 0.6212765957446809,
+        "selected_n": 146,
+        "selected_direction_accuracy": 0.8698630136986302
+      },
+      "start": "2022-01-04",
+      "end": "2022-12-29"
+    },
+    "2023": {
+      "fixed_formula": {
+        "n": 237,
+        "mae_percentage_points": 0.316446303879163,
+        "direction_accuracy": 0.759493670886076,
+        "coverage_at_0_3pct": 0.540084388185654,
+        "selected_n": 128,
+        "selected_direction_accuracy": 0.8984375
+      },
+      "zero_gap": {
+        "n": 237,
+        "mae_percentage_points": 0.46928840995719745,
+        "direction_accuracy": 0.004219409282700422,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 237,
+        "mae_percentage_points": 0.3006062227394875,
+        "direction_accuracy": 0.810126582278481,
+        "coverage_at_0_3pct": 0.37130801687763715,
+        "selected_n": 88,
+        "selected_direction_accuracy": 0.9318181818181818
+      },
+      "start": "2023-01-02",
+      "end": "2023-12-28"
+    },
+    "2024": {
+      "fixed_formula": {
+        "n": 236,
+        "mae_percentage_points": 0.4495335612614418,
+        "direction_accuracy": 0.7161016949152542,
+        "coverage_at_0_3pct": 0.5550847457627118,
+        "selected_n": 131,
+        "selected_direction_accuracy": 0.8015267175572519
+      },
+      "zero_gap": {
+        "n": 236,
+        "mae_percentage_points": 0.5967103234158295,
+        "direction_accuracy": 0.0,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 236,
+        "mae_percentage_points": 0.4749316358442352,
+        "direction_accuracy": 0.7076271186440678,
+        "coverage_at_0_3pct": 0.3305084745762712,
+        "selected_n": 78,
+        "selected_direction_accuracy": 0.8846153846153846
+      },
+      "start": "2024-01-02",
+      "end": "2024-12-30"
+    },
+    "2025": {
+      "fixed_formula": {
+        "n": 233,
+        "mae_percentage_points": 0.5144691862656703,
+        "direction_accuracy": 0.7081545064377682,
+        "coverage_at_0_3pct": 0.5493562231759657,
+        "selected_n": 128,
+        "selected_direction_accuracy": 0.8125
+      },
+      "zero_gap": {
+        "n": 233,
+        "mae_percentage_points": 0.6773849950415752,
+        "direction_accuracy": 0.0,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 233,
+        "mae_percentage_points": 0.5259521561610627,
+        "direction_accuracy": 0.7124463519313304,
+        "coverage_at_0_3pct": 0.3261802575107296,
+        "selected_n": 76,
+        "selected_direction_accuracy": 0.8552631578947368
+      },
+      "start": "2025-01-02",
+      "end": "2025-12-30"
+    },
+    "2026": {
+      "fixed_formula": {
+        "n": 169,
+        "mae_percentage_points": 1.5116769266922059,
+        "direction_accuracy": 0.7928994082840237,
+        "coverage_at_0_3pct": 0.7041420118343196,
+        "selected_n": 119,
+        "selected_direction_accuracy": 0.8403361344537815
+      },
+      "zero_gap": {
+        "n": 169,
+        "mae_percentage_points": 1.8214674519414817,
+        "direction_accuracy": 0.0,
+        "coverage_at_0_3pct": 0.0,
+        "selected_n": 0,
+        "selected_direction_accuracy": null
+      },
+      "spy_only_scaled": {
+        "n": 169,
+        "mae_percentage_points": 1.6763361765911873,
+        "direction_accuracy": 0.7455621301775148,
+        "coverage_at_0_3pct": 0.33727810650887574,
+        "selected_n": 57,
+        "selected_direction_accuracy": 0.8421052631578947
+      },
+      "start": "2026-01-02",
+      "end": "2026-09-21"
+    }
+  }
+}
