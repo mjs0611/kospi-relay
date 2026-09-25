@@ -311,8 +311,8 @@ footer a{{color:#2C5FD6}}
 /* 공유: Web Share가 있으면 시스템 공유 시트, 없으면 링크 복사. 링크는 이 날짜 페이지(OG 카드 붙음) */
 document.querySelector('.share').addEventListener('click', async function () {{
   var url = '{SITE_URL}/{D:%Y-%m-%d}/', text = {json.dumps(f"{head['cond']}. {head['claim']}" if head['claim'] else head['cond'], ensure_ascii=False)};
-  try {{ if (navigator.share) {{ await navigator.share({{ title: '밤사이 코스피', text: text, url: url }}); return; }} }} catch (e) {{ return; }}
-  try {{ await navigator.clipboard.writeText(text + '\n' + url); this.textContent = '링크 복사됨'; }} catch (e) {{ location.href = url; }}
+  try {{ if (navigator.share) {{ await navigator.share({{ title: '밤사이 코스피', text: text, url: url }}); return; }} }} catch (e) {{ if (e && e.name === 'AbortError') return; }}
+  try {{ await navigator.clipboard.writeText(text + '\\n' + url); this.textContent = '링크 복사됨'; }} catch (e) {{ location.href = url; }}
 }});
 </script>
 </div></body></html>"""
