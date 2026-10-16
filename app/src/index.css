@@ -7,31 +7,33 @@ html body{margin:0;background:var(--page);color:var(--ink);font-family:var(--san
 button,summary{touch-action:manipulation}
 button{cursor:pointer}
 button:disabled{cursor:default}
-.app{max-width:560px;margin:0 auto;padding:12px 16px calc(28px + env(safe-area-inset-bottom))}
-.view-status{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin-bottom:8px}
+.app{max-width:560px;min-height:100dvh;margin:0 auto;padding:8px 16px calc(24px + env(safe-area-inset-bottom))}
+.view-status{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px;margin-bottom:4px}
 .view-status p{font-size:14px;color:var(--muted);margin:0}
 .text-button{flex-shrink:0;min-height:44px;padding:8px 4px;border:0;background:transparent;color:var(--ink);font:600 14px var(--sans);text-decoration:underline;text-underline-offset:3px}
-.date-error{margin:0 0 12px}
+.date-error{margin:0 0 8px}
+.date-error .note{margin:0}
 
 .sheet{display:grid;grid-template-columns:minmax(0,1fr);border-radius:10px;overflow:hidden;background:#EEF0F3}
-.night{background:#15171D;color:#FFF;padding:20px;--ink:#FFF;--muted:#B2B8C5;--up:#FF6B5E;--down:#6E9BFF;--flat:#A7B0C2;--rule:rgba(255,255,255,.2)}
-.day{padding:20px;color:#10172A;--ink:#10172A;--muted:#515D72;--up:#AD2B25;--down:#2455C1;--flat:#535F75;--rule:#CFD5DE}
+.night{background:#15171D;color:#FFF;padding:8px 16px;--ink:#FFF;--muted:#B2B8C5;--up:#FF6B5E;--down:#6E9BFF;--flat:#A7B0C2;--rule:rgba(255,255,255,.2)}
+.day{padding:8px 16px;color:#10172A;--ink:#10172A;--muted:#515D72;--up:#AD2B25;--down:#2455C1;--flat:#535F75;--rule:#CFD5DE}
 .brand{font-size:14px;font-weight:700;color:var(--muted);margin:0}
 .stamp{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:14px;color:var(--muted);margin:0}
 .stamp b{color:var(--ink);font-weight:600}
-.cond{font-size:18px;font-weight:600;letter-spacing:-.02em;line-height:1.5;margin:12px 0 0}
-.claim{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.4;margin:16px 0 0}
-.lab{font-size:14px;font-weight:500;color:var(--muted);margin:20px 0 8px}
-.cap{font-size:14px;color:var(--muted);margin:12px 0 0}
-.tail{font-size:16px;font-weight:500;line-height:1.5;margin:20px 0 0;padding-top:16px;border-top:1px solid var(--rule)}
-.source-note{margin-top:16px;border-top:1px solid var(--rule)}
-.source-note summary{display:list-item;min-height:44px;padding:12px 0;color:var(--muted);font-size:14px;cursor:pointer}
+.cond{font-size:16px;font-weight:600;letter-spacing:-.02em;line-height:1.5;margin:8px 0 0}
+.claim{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:8px 0 0}
+.lab{font-size:14px;font-weight:500;color:var(--muted);margin:8px 0 4px}
+.cap{font-size:14px;color:var(--muted);margin:8px 0 0}
+.tail{font-size:16px;font-weight:500;line-height:1.5;margin:8px 0 0;padding-top:8px;border-top:1px solid var(--rule)}
+.source-note{margin-top:8px;border-top:1px solid var(--rule)}
+.source-note summary{display:list-item;min-height:44px;padding:8px 0;color:var(--muted);font-size:14px;cursor:pointer}
 .source-note .cap{margin:0 0 4px}
 .note{font-size:14px;color:var(--muted);line-height:1.5}
+.app>.note{margin:8px 0 0}
 
 /* 글씨는 화면 폭과 무관하게 유지하고 막대 칸만 줄인다. 오늘 표시는 해당 행의 다음 줄에 둔다. */
 .book-rows{list-style:none;margin:0;padding:0}
-.book-row{display:grid;grid-template-columns:4.5em minmax(0,1fr) 4.5em;align-items:center;gap:4px 12px;min-height:40px;padding:8px;font-size:16px}
+.book-row{display:grid;grid-template-columns:4.5em minmax(0,1fr) 4.5em;align-items:center;gap:4px 8px;min-height:28px;padding:2px 8px;font-size:16px}
 .book-ny .book-row{grid-template-columns:5em minmax(0,1fr) 4.5em;padding-inline:0}
 .book-label{font-size:14px;font-weight:500}
 .book-ny .book-label{color:var(--muted)}
@@ -48,13 +50,13 @@ button:disabled{cursor:default}
 .tone-ink{color:var(--ink)}.tone-muted{color:var(--muted)}.tone-up{color:var(--up)}.tone-flat{color:var(--flat)}.tone-down{color:var(--down)}
 .book-note{font-size:14px;margin:12px 0 0;color:var(--muted)}
 
-.actions{margin:16px 0 0}
+.actions{margin:8px 0 0}
 .btn-fallback{width:100%;min-height:56px;border:0;border-radius:8px;background:#15171D;color:#FFF;font:600 16px var(--sans);padding:16px}
 .btn-fallback:disabled{opacity:.6}
 /* TDS 구조 선택자: emotion 해시와 무관하게 기존 버튼 표면을 유지한다. */
 .actions .tds-mobile-button{border-radius:8px;overflow:hidden;min-height:56px}
 .actions .tds-mobile-button>div:first-of-type{background:#15171D!important}
-.share-feedback{min-height:48px;padding-top:8px}
+.share-feedback{min-height:28px;padding-top:4px}
 .share-feedback .note{margin:0}
 .share-feedback .note:not(:empty){animation:feedback-in 200ms cubic-bezier(.2,.8,.2,1)}
 .past{margin-top:8px}
@@ -67,13 +69,13 @@ button:disabled{cursor:default}
 .chip.on{background:#15171D;color:#FFF;border-color:#15171D}
 .chip:disabled{opacity:.6}
 .history-feedback{margin:8px 0 0;min-height:24px}
-.fine{font-size:14px;color:var(--muted);margin:20px 2px 0}
-.ad-banner{margin-top:18px;border-radius:8px;overflow:hidden}.ad-banner:empty{display:none}
+.fine{font-size:14px;color:var(--muted);margin:12px 2px 0}
+.ad-banner{margin-top:12px;border-radius:8px;overflow:hidden}.ad-banner:empty{display:none}
 button,summary{transition:transform 100ms cubic-bezier(.2,.8,.2,1),opacity 150ms ease-out}
 button:active:not(:disabled),summary:active{transform:scale(.97)}
 :focus-visible{outline:2px solid var(--down);outline-offset:2px}
 @keyframes feedback-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-@media (max-width:360px){.app{padding-inline:12px}.night,.day{padding:16px}.claim{font-size:22px}.book-row{column-gap:8px}}
+@media (max-width:360px){.app{padding-inline:12px}.night,.day{padding:8px 12px}.book-row{column-gap:8px}}
 @media (min-width:600px){
   .sheet{grid-template-columns:230px minmax(0,1fr)}
   .book-ny .book-row{grid-template-columns:5em minmax(0,1fr);column-gap:8px}
