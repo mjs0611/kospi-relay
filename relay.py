@@ -369,6 +369,8 @@ def build(phase):
     now = dt.datetime.now(KST); D = pd.Timestamp(os.environ.get("RELAY_DATE") or now.date())  # RELAY_DATE=YYYY-MM-DD 로컬 재현용
     if D > pd.Timestamp(now.date()):
         raise ValueError("Cannot publish a future date")
+    if D.weekday() >= 5:  # 주말엔 코스피 시가가 없다. 2026-10-17 토요일 수동 실행이 대기 카드를 발행함
+        print("::warning::Weekend date skipped"); return
     if D == pd.Timestamp(now.date()):
         phase = current_phase(now)  # 지연된 open도 마감 이후에는 close. 장중 현재가를 마감으로 표시하지 않는다.
     previous = json.loads((SITE / "latest.json").read_text()) if (SITE / "latest.json").exists() else {}
