@@ -44,7 +44,7 @@ def check():
         prev, us, vix, opened, closed = r.today_nodes(raw, D)
         assert us["SPY"] == (None, None, 1)  # 전날 종가로 대체하거나 휴장으로 처리하지 않음
         assert opened == 0.0 and closed is None and vix is None
-        f = r.frequency(hist, r.signal(us["SPY"][1], us["SOXX"][1]))
+        f = r.frequency(hist, r.signal(us["SPY"][1], us["SOXX"][1]), D)
         assert f["bin"] == "자료 대기" and f["n"] == 0
         assert r.headline(f, opened, "filled")["claim"] == "코스피는 +0.00%로 시작했어요"
         assert r.ny_svg(us).count("종가 대기") == 3
@@ -67,8 +67,8 @@ def check():
     # 자료 부재와 정상 자료를 구분하고, 유한하지만 비정상적으로 큰 신호도 처리한다.
     assert r.us_window(prices.loc[prices.index < P], P, D) is None
     assert "자료가 없어요" in r.headline(None, None, "pending")["cond"]
-    assert r.frequency(baseline, 0.006)["bin"] == "강한 상승"
-    assert r.frequency(baseline, 10)["bin"] == "자료 대기"
+    assert r.frequency(baseline, 0.006, D)["bin"] == "강한 상승"
+    assert r.frequency(baseline, 10, D)["bin"] == "자료 대기"
 
     # 빈 응답·통신 예외는 총 3번까지만 재조회한다. 가격 결측의 날짜는 지우지 않는다.
     with patch.object(r, "TICK", {"KOSPI": "^KS11"}), patch.object(r.yf, "Ticker") as ticker, patch.object(r.time, "sleep") as sleep:

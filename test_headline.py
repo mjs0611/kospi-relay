@@ -5,7 +5,7 @@ import ast, pathlib, html, json, datetime, subprocess
 src = pathlib.Path(__file__).with_name("relay.py").read_text()
 tree = ast.parse(src)
 keep = {"FLAT", "US", "LABEL", "NIGHT", "WENT", "LABEL_Z", "tenths", "pct", "color", "zone_of", "headline", "head_html", "sentence", "ny_svg", "kr_svg", "tail_text"}
-keep.update({"page", "pending_text"})
+keep.update({"share_card_page", "pending_text"})
 mod = ast.Module(body=[n for n in tree.body
                        if (isinstance(n, ast.FunctionDef) and n.name in keep)
                        or (isinstance(n, ast.Assign) and any(getattr(t, "id", None) in keep for t in n.targets))], type_ignores=[])
@@ -42,7 +42,7 @@ kr = kr_svg(fu, 0.0334, "done"); assert "오늘 " in kr and "+3.34%" in kr   # d
 print("headline ok")
 
 # 생성된 JavaScript를 실행해 공유 성공·취소·실패와 기존 복사 폴백을 검증한다.
-page = ns["page"](datetime.date(2026, 9, 25), None, {}, None, None, None, "pending", None)
+page = ns["share_card_page"](datetime.date(2026, 9, 25), None, {}, None, None, None, "pending", None)
 script = page.split("<script>", 1)[1].split("</script>", 1)[0]
 subprocess.run(["node", "-e", r"""
 const assert = require('node:assert/strict');

@@ -18,6 +18,7 @@ LABEL = {"SOXX": "반도체", "QQQ": "나스닥100", "SPY": "S&P500"}
 FLAT = 0.003          # 시가 갭 ±0.3% = 보합
 BINS = [(-9, -0.005, "강한 하락"), (-0.005, -0.003, "하락"), (-0.003, 0.003, "보합"), (0.003, 0.005, "상승"), (0.005, 9, "강한 상승")]
 SITE_URL = os.environ.get("SITE_URL", "https://mjs0611.github.io/kospi-relay")
+ADSENSE_SLOT = os.environ.get("ADSENSE_SLOT", "")
 ADSENSE = os.environ.get("ADSENSE_CLIENT", "")  # ca-pub-… 저장소 변수. 비면 광고 스크립트 없음
 AD_HEAD = f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE}" crossorigin="anonymous"></script>' if ADSENSE else ""
 
@@ -106,7 +107,9 @@ def bin_of(s):
     return next(b for b in BINS if b[0] <= s < b[1])
 
 
-def frequency(hist, s):
+def frequency(hist, s, D):
+    """Use only observed sessions before the publication date, for every caller."""
+    hist = hist.loc[hist.index < pd.Timestamp(D)].sort_index()
     if not np.isfinite(s) or not BINS[0][0] <= s < BINS[-1][1] or hist.empty:
         return {"bin": "자료 대기", "n": 0, "up": 0, "flat": 0, "down": 0, "years": 0}
     lo, hi, name = bin_of(s)
@@ -272,7 +275,7 @@ def pending_text(status):
     return "09:00에 채워진다" if status == "pending" else ("오늘 휴장" if status == "closed" else "")
 
 
-def page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None, og_image=None, source_note=None, source_states=None):
+def share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None, og_image=None, source_note=None, source_states=None):
     date_ko = f"{D.month}월 {D.day}일 {'월화수목금토일'[D.weekday()]}요일"
     stamp_t = {"pending": "자료 대기", "done": "마감 반영"}.get(status, "시가 반영")
     pending = pending_text(status)
@@ -321,6 +324,306 @@ document.querySelector('.share').addEventListener('click', async function () {{
 </div></body></html>"""
 
 
+# ---------- web edition (published JSON is read-only here) ----------
+WEB_CSS = """
+:root{font-family:"Pretendard Variable";font-variant-numeric:tabular-nums;color:#10172A;--ink:#10172A;--up:#D9433B;--down:#2C5FD6;--flat:#B5B9C0;--rule:#DFE2E7}
+*{box-sizing:border-box}body{margin:0;background:#FFF;word-break:keep-all;font-size:15px;line-height:1.5}
+a{color:inherit;text-underline-offset:4px}button{font:inherit;color:inherit}a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.wrap{max-width:1120px;margin:auto}.site-header{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:80px;border-bottom:1px solid var(--rule)}
+.brand{font-size:19px;font-weight:800;text-decoration:none}.site-header nav{display:flex;gap:24px;font-size:14px}
+.page-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:28px 0}h1{font-size:28px;letter-spacing:-.04em;margin:0}h2{font-size:19px;letter-spacing:-.025em;margin:0 0 20px}h3{font-size:16px;margin:28px 0 8px}p{margin:12px 0}
+.day-nav{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:14px;margin:0 0 24px}.day-nav a{white-space:nowrap}
+.answer-band{display:grid;grid-template-columns:320px minmax(0,1fr);gap:40px;padding:8px 0 36px}.kospi-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px}
+.ny-area,.frequency-area,.result-area{min-width:0}.ny-area{padding-right:28px;border-right:1px solid var(--rule)}.graphic-row{margin:0 0 16px}.row-label{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:14px}.row-label strong{font-size:19px;font-weight:650}.ticker{font-size:12px;margin-left:6px}.source-state{display:block;font-size:12px;margin-top:3px}.source-state:empty{display:none}
+.ny-track{height:8px;position:relative;background:#F3F4F6;margin-top:8px}.ny-track:before{content:"";position:absolute;left:50%;top:-3px;height:14px;width:1px;background:var(--flat)}.ny-track i{position:absolute;height:8px;display:block;background:var(--flat)}
+.frequency-scale{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px}.frequency-track{height:12px;background:#F3F4F6;margin-top:7px}.frequency-track i{display:block;height:12px;background:var(--flat)}.frequency-area .row-label strong{font-size:18px}.sample-count{font-size:13px;margin:16px 0 0}.answer{font-size:14px;line-height:1.6;margin:18px 0 0}.empty{display:flex;align-items:center;min-height:172px;font-size:15px}
+.result-basis{font-size:13px;margin:0 0 12px}.result-axis{display:flex;justify-content:space-between;font-size:12px;margin:0 0 16px}.result-axis span:nth-child(2){text-align:center}.result-track{position:relative;height:20px;margin:8px 8px 18px;border-bottom:1px solid var(--rule)}.result-track:before{content:"";position:absolute;width:1px;background:var(--flat);left:50%;top:0;height:25px}.result-mark{position:absolute;bottom:-6px;display:block;width:11px;height:11px;border-radius:50%;background:var(--flat);transform:translateX(-50%)}.result-mark.close{border-radius:0}.pending-value{font-size:14px!important;font-weight:500!important}
+.comparison{border-top:1px solid var(--rule);padding:28px 0 0}.section-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px}.section-heading a{font-size:14px}.comparison table,.archive-table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}.comparison th,.comparison td,.archive-table th,.archive-table td{padding:14px 8px;border-bottom:1px solid var(--rule);text-align:right;font-weight:500}.comparison th:first-child,.comparison td:first-child,.archive-table th:first-child,.archive-table td:first-child{text-align:left;width:19%}.comparison thead th,.archive-table thead th{font-size:13px}.comparison td a,.archive-table td a{font-weight:650}.cell-mark{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--flat);margin-right:5px;vertical-align:middle}.cell-wait{font-size:12px}.column-unit{display:block;font-size:12px;font-weight:400}.archive-table .no-record{text-align:center}.comparison .current-row{background:#F3F4F6}.comparison .current-row th{border-left:2px solid var(--ink)}.ad-slot{margin-top:32px;min-height:310px;border-top:1px solid var(--rule);padding-top:12px;font-size:12px}.ad-slot ins{display:block;height:280px}
+.site-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;border-top:1px solid var(--rule);padding:24px 0 32px;margin-top:48px;font-size:12px}.site-footer nav{display:flex;gap:20px}.share{background:#FFF;border:1px solid var(--rule);border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer}.share:not([hidden]){display:inline-block}.prose{max-width:720px}.prose p,.prose li{line-height:1.8}.method-table{width:100%;border-collapse:collapse}.method-table td,.method-table th{text-align:left;padding:10px;border-bottom:1px solid var(--rule)}
+@media(max-width:1199px){.wrap{margin:0 32px}.answer-band{grid-template-columns:280px minmax(0,1fr);gap:28px}.kospi-side{gap:28px}}
+@media(max-width:900px){.answer-band{grid-template-columns:1fr;gap:28px}.ny-area{padding:0 0 16px;border-right:0;border-bottom:1px solid var(--rule)}.kospi-side{gap:32px}.ny-area .graphic-row{max-width:480px}}
+@media(max-width:600px){.wrap{margin:0 20px}.site-header{min-height:68px;gap:12px}.brand{font-size:17px}.site-header nav{gap:16px;font-size:13px}.page-heading{padding:24px 0}h1{font-size:25px}h2{font-size:18px;margin-bottom:20px}.kospi-side{grid-template-columns:1fr;gap:28px}.frequency-area{padding-bottom:24px;border-bottom:1px solid var(--rule)}.answer-band{padding-bottom:28px}.ny-area{padding-bottom:24px}.graphic-row{margin-bottom:18px}.comparison{padding-top:24px}.comparison th,.comparison td,.archive-table th,.archive-table td{padding:12px 1px;font-size:12px}.comparison thead th,.archive-table thead th{font-size:12px}.comparison th:first-child,.comparison td:first-child,.archive-table th:first-child,.archive-table td:first-child{width:17%}.comparison .cell-mark,.archive-table .cell-mark{display:none}.comparison .cell-wait{font-size:12px}.section-heading{align-items:baseline}.section-heading h2{font-size:17px}.section-heading a{font-size:12px}.site-footer{display:block;margin-top:36px}.site-footer nav{margin-top:12px}.day-nav{font-size:13px}.empty{min-height:120px}}
+"""
+
+
+def web_url(path=""):
+    return SITE_URL.rstrip("/") + "/" + path.lstrip("/")
+
+
+def web_shell(title, path, body, description=None, image_day=None, share_day=None):
+    e = html.escape
+    url = web_url(path)
+    description = description or title
+    image_meta = f'<meta property="og:image" content="{e(web_url(image_day + "/relay.png"))}"><meta name="twitter:card" content="summary_large_image">' if image_day else ""
+    share_script = ""
+    if share_day:
+        # JSON encoding plus escaping '<' keeps published text out of script markup.
+        target = json.dumps(web_url(share_day + "/")).replace("<", "\\u003c")
+        share_script = f"""<script>
+const shareButton = document.querySelector('.share');
+shareButton.hidden = false;
+shareButton.addEventListener('click', async function () {{
+  const url = {target};
+  try {{ if (navigator.share) {{ await navigator.share({{title:'밤사이 코스피',url}}); return; }} }} catch(e) {{ if(e.name === 'AbortError') return; }}
+  try {{ await navigator.clipboard.writeText(url); this.textContent = '링크를 복사했어요'; }} catch(e) {{ location.href = url; }}
+}});
+</script>"""
+    ad_head = f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={e(ADSENSE)}" crossorigin="anonymous"></script>' if ADSENSE else ""
+    return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{e(title)} | 밤사이 코스피</title><meta name="description" content="{e(description)}">
+<link rel="canonical" href="{e(url)}"><meta property="og:url" content="{e(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(description)}">{image_meta}{ad_head}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>{WEB_CSS}</style></head><body><div class="wrap">
+<header class="site-header"><a class="brand" href="{e(web_url())}">밤사이 코스피</a><nav aria-label="사이트"><a href="{e(web_url('archive/' + image_day[:7] + '/')) if image_day else e(web_url() + '#records')}">지난 기록</a><a href="{e(web_url('about/'))}">집계 기준</a></nav></header>
+<main>{body}</main><footer class="site-footer"><span>정보 제공용, 투자 판단 자료 아님</span><nav><a href="{e(web_url('about/'))}">집계 기준</a><a href="{e(web_url('privacy/'))}">개인정보처리방침</a></nav></footer></div>{share_script}</body></html>'''
+
+
+def web_frequency(record, hist):
+    """Recompute numbers; never render legacy aggregates, text or SVG fields."""
+    us = record.get("us", {})
+    spy, soxx = us.get("SPY"), us.get("SOXX")
+    s = signal(spy[1], soxx[1]) if spy and soxx else np.nan
+    return frequency(hist, s, pd.Timestamp(record["date"]))
+
+
+def no_us_session(record):
+    """Legacy null freq means no comparison window, not an incomplete price.
+
+    Read only this state flag, never stored frequency numbers. A missing field
+    gives no evidence about whether a US session existed.
+    """
+    return "freq" in record and record["freq"] is None
+
+
+def web_ny(record, latest):
+    us = record.get("us", {})
+    values = [us[k][1] for k in US if us.get(k) and us[k][1] is not None]
+    scale = max([.005] + [abs(v) for v in values])
+    rows = []
+    for k in US:
+        value = us[k][1] if us.get(k) else None
+        state = record.get("source_states", {}).get(k)
+        stamp = record.get("source_dates", {}).get(k)
+        reused = f'기존 게시값 {korean_date(stamp) if stamp else "기준일 미확인"}' if state == "reused" else ""
+        bar = ""
+        if value is not None:
+            width = abs(value) / scale * 50
+            left = 50 - width if value < 0 else 50
+            bar = f'<i style="left:{left:.3f}%;width:{width:.3f}%;background:{color(value)}"></i>'
+        value_class = ' class="pending-value"' if value is None else ''
+        missing = "자료 대기" if latest and not no_us_session(record) else "기록이 없어요"
+        rows.append(f'<div class="graphic-row"><div class="row-label"><span>{html.escape(LABEL[k])}<span class="ticker">{k}</span></span><strong{value_class}>{pct(value) if value is not None else missing}</strong></div><div class="ny-track" aria-hidden="true">{bar}</div><span class="source-state">{reused}</span></div>')
+    if 'reused' in record.get('source_states', {}).values():
+        note = '이전에 확인한 뉴욕 자료예요'
+    elif len(values) < 3:
+        note = '뉴욕 자료를 기다리고 있어요' if latest and not no_us_session(record) else '비교할 뉴욕 자료가 없어요' if not values else '일부 뉴욕 기록이 없어요'
+    elif all(v > 0 for v in values):
+        note = '뉴욕 세 지표가 모두 올랐어요'
+    elif all(v < 0 for v in values):
+        note = '뉴욕 세 지표가 모두 내렸어요'
+    elif all(v == 0 for v in values):
+        note = '뉴욕 세 지표가 그대로였어요'
+    else:
+        note = '뉴욕 세 지표의 방향이 엇갈렸어요'
+    return '<section class="ny-area" aria-labelledby="ny-title"><h2 id="ny-title">밤사이 뉴욕</h2>' + ''.join(rows) + f'<p class="answer">{note}</p></section>'
+
+
+def web_frequency_graph(f, latest, no_session=False):
+    n = f["n"]
+    if n < 30:
+        missing = "비교할 뉴욕 자료가 없어요" if no_session else "자료가 채워지면 통계를 보여드릴게요" if latest else "비교할 과거 기록이 없어요"
+        message = missing if not n else f'비슷한 밤이 {n}번뿐이라 통계는 안 냈어요'
+        content = f'<div class="empty">{message}</div>'
+    else:
+        rows = []
+        for z in ("up", "flat", "down"):
+            share = f[z] / n
+            rows.append(f'<div class="graphic-row"><div class="row-label"><span>{LABEL_Z[z]}</span><strong>{share:.0%}</strong></div><div class="frequency-track" aria-hidden="true"><i style="width:{share * 100:.3f}%;background:var(--{z})"></i></div></div>')
+        majority = max(("up", "down", "flat"), key=lambda z: f[z])
+        content = '<div class="frequency-scale"><span>과거 시가 빈도</span><span>0~100%</span></div>' + ''.join(rows) + f'<p class="sample-count">비슷한 밤 {n:,}번</p><p class="answer">코스피는 {tenths(f[majority] / n)} {WENT[majority]}</p>'
+    return f'<section class="frequency-area" aria-labelledby="frequency-title" data-sample-count="{n}"><h2 id="frequency-title">비슷한 밤 다음에는</h2>{content}</section>'
+
+
+def web_result(record, latest):
+    opened = record.get("open")
+    closed = record.get("close") if record.get("status") == "done" else None
+    scale = max([.01] + [abs(v) * 1.15 for v in (opened, closed) if v is not None])
+    rows = []
+    for name, value, kind in (("시가", opened, "open"), ("종가", closed, "close")):
+        waiting = "기록이 없어요" if not latest else "시가 대기" if kind == "open" else "종가 대기"
+        label = f'<strong>{pct(value)}</strong>' if value is not None else f'<strong class="pending-value">{waiting}</strong>'
+        mark = f'<i class="result-mark {kind}" style="left:{50 + value / scale * 50:.3f}%;background:{color(value)}"></i>' if value is not None else ""
+        rows.append(f'<div class="result-row" data-observed="{str(value is not None).lower()}"><div class="row-label"><span>{name}</span>{label}</div><div class="result-track" aria-hidden="true">{mark}</div></div>')
+    if closed is not None:
+        answer = f'코스피는 {pct(closed)}로 마감했어요'
+    elif opened is not None:
+        answer = f'코스피는 {pct(opened)}로 시작했어요'
+    else:
+        answer = "시가가 들어오면 여기에 표시해요" if latest else "이날은 관측한 코스피 기록이 없어요"
+    return f'<section class="result-area" aria-labelledby="result-title"><h2 id="result-title">코스피 시가와 종가</h2><p class="result-basis">전일 종가 대비 등락률</p><div class="result-axis"><span>{-scale:.1%}</span><span>0%</span><span>+{scale:.1%}</span></div>{"".join(rows)}<p class="answer">{answer}</p></section>'
+
+
+def web_value(value, waiting="기록이 없어요"):
+    return f'<span class="cell-mark" style="background:{color(value)}" aria-hidden="true"></span>{pct(value)}' if value is not None else f'<span class="cell-wait">{waiting}</span>'
+
+
+def korean_date(value):
+    parts = [int(part) for part in value.split('-')]
+    return f'{parts[0]}년 {parts[1]}월' + (f' {parts[2]}일' if len(parts) == 3 else '')
+
+
+def record_table(records, latest_date, current_date=None, archive=False):
+    """Share columns, missing values and provenance across recent/month tables."""
+    rows = []
+    for r in records:
+        latest = r["date"] == latest_date
+        cells = []
+        for k in US:
+            value = r.get("us", {}).get(k)
+            cell = web_value(value[1] if value else None, "자료 대기" if latest and not no_us_session(r) else "기록이 없어요")
+            if value and r.get("source_states", {}).get(k) == 'reused':
+                source_date = r.get('source_dates', {}).get(k)
+                stamp = korean_date(source_date) if source_date else '기준일 미확인'
+                cell += f'<span class="source-state" title="기존 게시값 {stamp}">기존 값</span>'
+            cells.append(f'<td>{cell}</td>')
+        if r.get("open") is None and not latest:
+            cells.append('<td colspan="2" class="no-record">기록이 없어요</td>')
+        else:
+            cells += [f'<td>{web_value(r.get("open"), "시가 대기" if latest else "기록이 없어요")}</td>',
+                      f'<td>{web_value(r.get("close") if r.get("status") == "done" else None, "종가 대기" if latest else "기록이 없어요")}</td>']
+        current = ' class="current-row" aria-current="date"' if r["date"] == current_date else ''
+        rows.append(f'<tr data-date="{r["date"]}"{current}><th scope="row"><a href="{html.escape(web_url(r["date"] + "/"))}">{r["date"][5:].replace("-", "/")}</a></th>' + ''.join(cells) + '</tr>')
+    table_class = 'archive-table' if archive else 'comparison-table'
+    return f'<table class="{table_class}"><thead><tr><th scope="col">날짜</th>' + ''.join(f'<th scope="col">{x}<span class="column-unit">등락률</span></th>' for x in (*US, "시가", "종가")) + '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table>'
+
+
+def comparison_table(records, as_of):
+    recent = [r for r in records if r["date"] <= as_of and r.get("open") is not None][:5]
+    latest_date = records[0]["date"]
+    if recent:
+        return record_table(recent, latest_date, current_date=as_of)
+    return '<p>시가가 들어오면 기록을 모아 보여드릴게요</p>' if as_of == latest_date else '<p>관측한 시가 기록이 없어요</p>'
+
+
+def web_day(record, records, hist, home=False):
+    date = record["date"]
+    latest = date == records[0]["date"]
+    pos = next(i for i, r in enumerate(records) if r["date"] == date)
+    links = []
+    for rel, i, label in (("prev", pos + 1, "이전 기록"), ("next", pos - 1, "다음 기록")):
+        if 0 <= i < len(records):
+            d = records[i]["date"]
+            links.append(f'<a rel="{rel}" href="{html.escape(web_url(d + "/"))}">{label} {d[5:].replace("-", "/")}</a>')
+    if not latest:
+        links.append(f'<a href="{html.escape(web_url())}">최신 기록 보기</a>')
+    title = f'{date} 코스피 기록'
+    heading = f'<div class="page-heading"><h1><time datetime="{date}">{korean_date(date)}</time></h1><button class="share" type="button" hidden>공유</button></div>'
+    nav = '<nav class="day-nav" aria-label="날짜별 기록">' + ''.join(links) + '</nav>'
+    f = web_frequency(record, hist)
+    band = '<div class="answer-band">' + web_ny(record, latest) + '<div class="kospi-side">' + web_frequency_graph(f, latest, no_us_session(record)) + web_result(record, latest) + '</div></div>'
+    table = f'<section class="comparison" id="records"><div class="section-heading"><h2>최근 5거래일 비교</h2><a href="{html.escape(web_url("archive/" + date[:7] + "/"))}">월별 기록 보기</a></div>{comparison_table(records, date)}</section>'
+    ad = ""
+    if ADSENSE and ADSENSE_SLOT and record.get("open") is not None:
+        ad = f'<aside class="ad-slot" aria-label="광고"><div>광고</div><ins class="adsbygoogle" data-ad-client="{html.escape(ADSENSE)}" data-ad-slot="{html.escape(ADSENSE_SLOT)}" data-ad-format="horizontal" data-full-width-responsive="true"></ins></aside><script>(window.adsbygoogle = window.adsbygoogle || []).push({{}});</script>'
+    return web_shell(title, "" if home else date + "/", heading + nav + band + table + ad,
+                     description=f'{date} 뉴욕 세 지표와 비슷한 밤의 과거 빈도, 코스피 시가와 종가를 함께 봐요', image_day=date, share_day=date)
+
+
+def web_archive(month, records, months):
+    month_records = [r for r in records if r["date"].startswith(month)]
+    i = months.index(month)
+    links = []
+    for rel, j, label in (("prev", i + 1, "이전 달"), ("next", i - 1, "다음 달")):
+        if 0 <= j < len(months):
+            links.append(f'<a rel="{rel}" href="{html.escape(web_url("archive/" + months[j] + "/"))}">{label} {int(months[j][5:])}월</a>')
+    body = f'<div class="page-heading"><h1>{korean_date(month)} 기록</h1></div><nav class="day-nav" aria-label="월별 기록">{"".join(links)}</nav>{record_table(month_records, records[0]["date"], archive=True)}'
+    return web_shell(f'{month} 코스피 기록', f'archive/{month}/', body, image_day=records[0]["date"])
+
+
+def web_about(hist):
+    period = (f'이번에 확보한 유효 이력은 {korean_date(hist.index.min().strftime("%Y-%m-%d"))}부터 '
+              f'{korean_date(hist.index.max().strftime("%Y-%m-%d"))}까지예요.' if not hist.empty
+              else '현재 가격 이력을 기다리고 있어요.')
+    body = f'''<div class="page-heading"><h1>집계 기준</h1></div><article class="prose">
+<h2>밤사이 뉴욕을 어떻게 보나요?</h2><p>SOXX는 반도체, QQQ는 나스닥100, SPY는 S&amp;P500을 따라가는 ETF예요. 지수 자체의 등락률과는 차이가 있을 수 있어요. 코스피 전일 거래일부터 이 날짜 전날까지 미국 거래가 여러 번 열렸다면 그 기간의 누적 등락률을 써요.</p>
+<h2>비슷한 밤을 어떻게 묶나요?</h2><p>SPY와 SOXX의 등락률을 평균 낸 뒤 0.4를 곱해 같은 구간의 밤을 모아요. QQQ는 비교용으로 보여주며 구간 계산에는 넣지 않아요.</p>
+<table class="method-table"><thead><tr><th>구간</th><th>평균에 0.4를 곱한 값</th></tr></thead><tbody><tr><td>강한 하락</td><td>-0.5% 미만</td></tr><tr><td>하락</td><td>-0.5% 이상 -0.3% 미만</td></tr><tr><td>보합</td><td>-0.3% 이상 +0.3% 미만</td></tr><tr><td>상승</td><td>+0.3% 이상 +0.5% 미만</td></tr><tr><td>강한 상승</td><td>+0.5% 이상</td></tr></tbody></table>
+<h2>과거 빈도는 무엇인가요?</h2><p>비슷한 밤 뒤에 코스피가 전일 종가보다 얼마나 달라져 시작했는지 세어요. 시가가 +0.3%를 넘으면 상승, -0.3%보다 낮으면 하락, 그 사이인 ±0.3%는 경계를 포함해 보합이에요. 비슷한 밤이 30번보다 적으면 비율을 보여주지 않아요. 과거 빈도는 앞으로의 상승 확률이 아니에요.</p>
+<h2>어느 기간을 쓰나요?</h2><p>2021년부터 가격을 조회해요. {period} 각 날짜의 빈도에는 그 날짜보다 앞선 코스피 거래일만 넣어요. 이 날짜와 그 뒤의 자료는 쓰지 않아요. 이력을 구하지 못하면 이전에 저장한 통계를 대신 보여주지 않아요.</p>
+<h2>시가와 종가는 어떻게 보나요?</h2><p>시가와 종가를 각각 전일 종가와 비교해요. 두 점은 장중 가격 경로가 아니에요. 최신 기록에서 아직 관측하지 못한 가격은 대기로 남겨요. 지난 기록에서 빠진 가격은 기록이 없다고 표시해요. 이미 확인한 같은 날짜의 값을 다시 쓸 때는 기존 게시값이라고 표시해요.</p>
+<h2>언제 새로고침하나요?</h2><p>한국 시간 평일 06:45에 뉴욕 자료, 09:06에 코스피 시가, 15:40에 종가를 반영하도록 실행해요. 자료가 늦게 오거나 실행이 지연되면 이후 재시도에서 채워요. 관측값이 없다는 이유만으로 휴장이라고 표시하지 않아요.</p>
+<h2>자료와 운영</h2><p>가격 자료는 Yahoo Finance에서 받아요. 운영자는 디토엑시스예요. 문의는 <a href="mailto:help.ditoaxis@gmail.com">help.ditoaxis@gmail.com</a>으로 보내주세요.</p><p><a href="{html.escape(web_url('privacy/'))}">개인정보처리방침 보기</a></p></article>'''
+    return web_shell("집계 기준", "about/", body)
+
+
+def load_web_records():
+    """Isolate invalid archive files at the read boundary; never rewrite them."""
+    records = []
+    for path in sorted((SITE / "days").glob("*.json"), reverse=True):
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(record, dict):
+                raise ValueError("expected a record object")
+            date = record["date"]
+            if dt.date.fromisoformat(date).isoformat() != date:
+                raise ValueError("expected YYYY-MM-DD date")
+            for key in ("us", "source_states", "source_dates"):
+                if not isinstance(record.get(key, {}), dict):
+                    raise ValueError(f"invalid {key} mapping")
+            prices = [record.get("open"), record.get("close")]
+            for key in US:
+                window = record.get("us", {}).get(key)
+                if window is not None:
+                    if not isinstance(window, list) or len(window) < 2:
+                        raise ValueError(f"invalid {key} prices")
+                    prices.extend(window[:2])
+                source_date = record.get("source_dates", {}).get(key)
+                if source_date is not None:
+                    if dt.date.fromisoformat(source_date).isoformat() != source_date:
+                        raise ValueError(f"invalid {key} source date")
+            if any(value is not None and (not isinstance(value, (int, float)) or not np.isfinite(value)) for value in prices):
+                raise ValueError("invalid price change")
+        except (OSError, UnicodeError, ValueError, TypeError, KeyError) as exc:
+            print(f"::warning::Skipping web record {path.name}: {exc}")
+            continue
+        records.append(record)
+    return sorted(records, key=lambda record: record["date"], reverse=True)
+
+
+def regenerate(hist=None):
+    """Rebuild all HTML from published records without changing JSON or share PNGs.
+
+    Pass aligned fixture history for offline rendering. CLI fetches it once; an
+    outage deliberately empties web statistics instead of trusting legacy freq.
+    """
+    if hist is None:
+        try:
+            hist = align(fetch())
+        except Exception as exc:
+            print(f"::warning::Web price history unavailable; frequency pending: {exc}")
+            hist = pd.DataFrame(columns=["gap", "s"], index=pd.DatetimeIndex([]))
+    records = load_web_records()
+    SITE.mkdir(parents=True, exist_ok=True)
+    months = sorted({r["date"][:7] for r in records}, reverse=True)
+    if records:
+        (SITE / "index.html").write_text(web_day(records[0], records, hist, home=True), encoding="utf-8")
+    else:
+        (SITE / "index.html").write_text(web_shell("밤사이 코스피", "", '<div class="page-heading"><h1>밤사이 코스피</h1></div><p id="records">첫 기록을 기다리고 있어요</p>'), encoding="utf-8")
+    for r in records:
+        day = SITE / r["date"]
+        day.mkdir(exist_ok=True)
+        (day / "index.html").write_text(web_day(r, records, hist), encoding="utf-8")
+    for month in months:
+        folder = SITE / "archive" / month
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "index.html").write_text(web_archive(month, records, months), encoding="utf-8")
+    (SITE / "about").mkdir(exist_ok=True)
+    (SITE / "about" / "index.html").write_text(web_about(hist), encoding="utf-8")
+    write_site_files([r["date"] for r in records])
+    (SITE / ".nojekyll").touch()
+    print(f'regenerated {len(records)} dates, {len(months)} months')
+
+
 # ---------- pipeline ----------
 def current_phase(now):
     hm = (now.hour, now.minute)
@@ -365,6 +668,18 @@ def restore_session(K, previous):
     return pd.concat([K, row]).sort_index()
 
 
+def source_provenance(raw, D, us, observed_us, saved):
+    """Keep fresh, missing and preserved source values identifiable in every publisher."""
+    states = {k: ('missing' if not us.get(k) or us[k][1] is None else
+                  'fresh' if observed_us.get(k) and observed_us[k][1] is not None else 'reused') for k in US}
+    dates = {k: (f"{raw[k].index[raw[k].index < D][-1]:%Y-%m-%d}" if states[k] == 'fresh'
+                 else saved.get('source_dates', {}).get(k) if states[k] == 'reused' and saved.get('source_states', {}).get(k) in ('fresh', 'reused') else None) for k in US}
+    note = "뉴욕 자료 기준 · " + " · ".join(
+        f"{k} 자료 대기" if states[k] == 'missing' else
+        f"{k} {dates[k] or '기준일 미확인'}" + (' (기존 게시값)' if states[k] == 'reused' else '') for k in US)
+    return states, dates, note
+
+
 def build(phase):
     now = dt.datetime.now(KST); D = pd.Timestamp(os.environ.get("RELAY_DATE") or now.date())  # RELAY_DATE=YYYY-MM-DD 로컬 재현용
     if D > pd.Timestamp(now.date()):
@@ -407,7 +722,7 @@ def build(phase):
     if nodes is None:
         return
     prev, us, vix_lv, opened, closed_pct = nodes
-    f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1])) if us.get("SPY") and us.get("SOXX") else None
+    f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1]), D) if us.get("SPY") and us.get("SOXX") else None
     # 휴장 캘린더 없이 자료 부재를 휴장으로 확정하지 않는다. 확인된 시가·마감은 후속 작업에서도 보존한다.
     if opened is None: status = "pending"
     elif closed_pct is not None: status = "done"     # 15:40 마감 반영
@@ -416,26 +731,19 @@ def build(phase):
         print("::warning::Overnight prices incomplete; publishing explicit waiting state")
     tail = tail_text(status, closed_pct, us_hours(D)[0])
     prev_link = f"{prev['date']:%Y-%m-%d}" if (SITE / f"{prev['date']:%Y-%m-%d}").exists() else None
-    source_states = {k: ('missing' if not us.get(k) or us[k][1] is None else
-                         'fresh' if observed_us.get(k) and observed_us[k][1] is not None else 'reused') for k in US}
-    source_dates = {k: (f"{raw[k].index[raw[k].index < D][-1]:%Y-%m-%d}" if source_states[k] == 'fresh'
-                        else saved.get('source_dates', {}).get(k) if source_states[k] == 'reused' and saved.get('source_states', {}).get(k) in ('fresh', 'reused') else None) for k in US}
-    source_note = "뉴욕 자료 기준 · " + " · ".join(
-        f"{k} 자료 대기" if source_states[k] == 'missing' else
-        f"{k} {source_dates[k] or '기준일 미확인'}" + (' (기존 게시값)' if source_states[k] == 'reused' else '') for k in US)
+    source_states, source_dates, source_note = source_provenance(raw, D, us, observed_us, saved)
     payload = json.dumps({"source_states": source_states, "source_dates": source_dates, "source_note": source_note, "date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
         "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
         "head": headline(f, opened, status, source_states), "sentence": sentence(f, source_states) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
         "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float, allow_nan=False)
     day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
-    (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail, source_note=source_note, source_states=source_states), encoding="utf-8")
-    # 루트도 그날 날짜 PNG를 가리킨다. /relay.png 고정 URL이면 카톡이 며칠 전 미리보기를 캐시로 재사용한다
-    (SITE / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, prev_link, tail, source_note=source_note, source_states=source_states).replace('href="../', 'href="./'), encoding="utf-8")
     (SITE / "latest.json").write_text(payload, encoding="utf-8")
     (SITE / "days").mkdir(exist_ok=True); (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(payload, encoding="utf-8")
     write_index()
     (SITE / ".nojekyll").touch()
-    screenshot(SITE / "index.html", SITE / "relay.png")
+    regenerate(hist)
+    screenshot_card(share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail,
+                                  source_note=source_note, source_states=source_states), SITE / "relay.png")
     shutil.copyfile(SITE / "relay.png", day / "relay.png")   # 날짜 페이지 OG 이미지 = 그날 카드
     print(f"built {D.date()} {status} freq={f}")
 
@@ -448,7 +756,6 @@ def write_index():
         except Exception: z = None
         rows.append({"d": q.stem, "z": z})
     (SITE / "index.json").write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
-    write_site_files([r["d"] for r in rows])
 
 
 PRIVACY = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -465,10 +772,12 @@ PRIVACY = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta na
 
 def write_site_files(days):
     """검색·광고 심사용 정적 파일. SITE_URL이 github.io가 아니면 CNAME도 쓴다(Pages 커스텀 도메인)."""
-    (SITE / "privacy").mkdir(exist_ok=True); (SITE / "privacy" / "index.html").write_text(PRIVACY, encoding="utf-8")
-    urls = [f"{SITE_URL}/"] + [f"{SITE_URL}/{d}/" for d in days]
+    privacy = PRIVACY.replace('</head>', f'<link rel="canonical" href="{html.escape(web_url("privacy/"))}"></head>')
+    (SITE / "privacy").mkdir(exist_ok=True); (SITE / "privacy" / "index.html").write_text(privacy, encoding="utf-8")
+    months = sorted({d[:7] for d in days}, reverse=True)
+    urls = [web_url()] + [web_url(d + '/') for d in days] + [web_url('archive/' + m + '/') for m in months] + [web_url('about/'), web_url('privacy/')]
     (SITE / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-                                      + "".join(f"<url><loc>{u}</loc></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
+                                      + "".join(f"<url><loc>{html.escape(u)}</loc></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
     (SITE / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
     host = SITE_URL.split("//", 1)[1].split("/", 1)[0]
     if not host.endswith("github.io"): (SITE / "CNAME").write_text(host + "\n", encoding="utf-8")
@@ -480,21 +789,41 @@ def backfill(n):
         archive = SITE / "days" / f"{D:%Y-%m-%d}.json"
         previous = json.loads(archive.read_text()) if archive.exists() else {}
         saved = previous if previous.get("date") == f"{D:%Y-%m-%d}" else {}
-        nodes = preserve_day(saved, *today_nodes(raw, D))
+        prev, us, vix_lv, opened, closed_pct = today_nodes(raw, D)
+        observed_us = dict(us)
+        nodes = preserve_day(saved, prev, us, vix_lv, opened, closed_pct)
         if nodes is None:
             continue
         prev, us, vix_lv, opened, closed_pct = nodes
-        f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1])) if us.get("SPY") and us.get("SOXX") else None
+        f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1]), D) if us.get("SPY") and us.get("SOXX") else None
         status = "done" if closed_pct is not None else "filled" if opened is not None else "pending"
+        source_states, source_dates, source_note = source_provenance(raw, D, us, observed_us, saved)
         day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
-        (day / "index.html").write_text(page(D, prev, us, vix_lv, opened, f, status, None, None), encoding="utf-8")
-        screenshot(day / "index.html", day / "relay.png")
-        (SITE / "days").mkdir(exist_ok=True)
-        (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(json.dumps({"date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
+        payload = {"source_states": source_states, "source_dates": source_dates, "source_note": source_note,
+            "date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
             "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": None, "freq": f,
-            "head": headline(f, opened, status), "sentence": sentence(f) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status)}, ensure_ascii=False, default=float, allow_nan=False), encoding="utf-8")
+            "head": headline(f, opened, status, source_states), "sentence": sentence(f, source_states) if f and f["n"] else None,
+            "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
+            "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}
+        # Backfill repairs changed publications; HTML regeneration never touches PNGs.
+        changed = any(saved.get(key) != payload[key] for key in ("status", "open", "close", "us"))
+        if changed or not (day / "relay.png").exists():
+            screenshot_card(share_card_page(D, prev, us, vix_lv, opened, f, status, None, None,
+                                           source_note=source_note, source_states=source_states), day / "relay.png")
+        (SITE / "days").mkdir(exist_ok=True)
+        archive.write_text(json.dumps(payload, ensure_ascii=False, default=float, allow_nan=False), encoding="utf-8")
     write_index()
+    regenerate(hist)
     print("backfilled", n)
+
+
+def screenshot_card(markup, png):
+    """Render the share template independently of the web pages, without publishing it."""
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix="kospi-share-") as tmp:
+        card = Path(tmp) / "card.html"
+        card.write_text(markup, encoding="utf-8")
+        screenshot(card, png)
 
 
 def screenshot(html_path, png):
@@ -510,12 +839,16 @@ def selfcheck():
     raw = fetch(); hist = align(raw)
     g = hist.loc["2025-04-07", "gap"]; assert abs(g - (-0.0431)) < 0.001, g          # 관세 폭락 날 실측 -4.31%
     assert hist.loc["2025-04-10", "gap"] > 0.04                                      # 유예 발표 반등
-    f = frequency(hist, 0.006); assert f["up"] + f["flat"] + f["down"] == f["n"] and f["up"] / f["n"] > 0.8, f
-    tot = sum(frequency(hist, (lo + min(hi, 0.02)) / 2)["n"] for lo, hi, _ in BINS); assert tot == len(hist), (tot, len(hist))
+    cutoff = hist.index.max() + pd.Timedelta(days=1)
+    f = frequency(hist, 0.006, cutoff); assert f["up"] + f["flat"] + f["down"] == f["n"] and f["up"] / f["n"] > 0.8, f
+    tot = sum(frequency(hist, (lo + min(hi, 0.02)) / 2, cutoff)["n"] for lo, hi, _ in BINS); assert tot == len(hist), (tot, len(hist))
+    D = hist.index[len(hist) // 2]
+    before = sum(frequency(hist, (lo + min(hi, 0.02)) / 2, D)["n"] for lo, hi, _ in BINS)
+    assert before == len(hist[hist.index < D]), (before, D)
     assert "올라서" in sentence(f)
     print("selfcheck ok", len(hist), f)
 
 
 if __name__ == "__main__":
     {"morning": lambda: build("morning"), "open": lambda: build("open"), "close": lambda: build("close"), "selfcheck": selfcheck,
-     "backfill": lambda: backfill(int(sys.argv[2]) if len(sys.argv) > 2 else 20)}[sys.argv[1]]()
+     "backfill": lambda: backfill(int(sys.argv[2]) if len(sys.argv) > 2 else 20), "regenerate": regenerate}[sys.argv[1]]()
