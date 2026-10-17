@@ -813,6 +813,8 @@ def backfill(n):
             continue
         prev, us, vix_lv, opened, closed_pct = nodes
         f = frequency(hist, signal(us["SPY"][1], us["SOXX"][1]), D) if us.get("SPY") and us.get("SOXX") else None
+        if no_us_session(saved) and not any(w and w[1] is not None for w in us.values()):
+            f = None  # keep the published no-session flag; backfill must not turn it into a waiting state
         status = "done" if closed_pct is not None else "filled" if opened is not None else "pending"
         source_states, source_dates, source_note = source_provenance(raw, D, us, observed_us, saved)
         day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)

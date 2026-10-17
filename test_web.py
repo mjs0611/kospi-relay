@@ -652,6 +652,15 @@ class WebTests(unittest.TestCase):
         self.assertEqual(len(self.captures), before)
         self.assertEqual(png.read_bytes(), b'preserve during HTML regeneration')
 
+    def test_backfill_keeps_no_session_flag(self):
+        day = '2026-10-16'
+        self.write({**legacy_record(day, missing=True), 'freq': None})
+        for key in r.US:
+            self.raw[key].loc[r.pd.Timestamp('2026-10-15'), 'Close'] = r.np.nan
+        r.backfill(1)
+        self.assertIsNone(json.loads((self.site / 'days' / (day + '.json')).read_text())['freq'])
+        self.assertIn('비교할 뉴욕 자료가 없어요', self.read(day).root.text)
+
     def test_backfill_close_present_without_open_keeps_done_status(self):
         day = r.pd.Timestamp('2026-10-16')
         self.raw['KOSPI'].loc[day, 'Open'] = r.np.nan

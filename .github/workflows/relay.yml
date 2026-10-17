@@ -18,6 +18,7 @@ on:
         options: [morning, open, close, backfill]
         default: morning
       date: { description: "YYYY-MM-DD (재현용, 비우면 오늘)", type: string, default: "" }
+      days: { description: "backfill 거래일 수", type: string, default: "20" }
 permissions: { contents: write }
 concurrency: relay
 jobs:
@@ -32,10 +33,11 @@ jobs:
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt && playwright install --with-deps chromium
       - run: python test_missing_prices.py && python test_headline.py && python test_signal_evaluation.py && python test_web.py
-      - run: rm -rf site/.git && python relay.py "$PHASE"
+      - run: rm -rf site/.git && python relay.py "$PHASE" "${DAYS:-20}"
         env:
           PHASE: ${{ inputs.phase || 'morning' }}
           RELAY_DATE: ${{ github.event.inputs.date }}
+          DAYS: ${{ github.event.inputs.days }}
           SITE_URL: ${{ vars.SITE_URL || 'https://mjs0611.github.io/kospi-relay' }}
           ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
           ADSENSE_SLOT: ${{ vars.ADSENSE_SLOT }}
