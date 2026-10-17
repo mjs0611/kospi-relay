@@ -113,7 +113,6 @@ class WebTests(unittest.TestCase):
         self.fetch = self.patch(r, 'fetch', return_value=self.raw)
         self.patch(r, 'ADSENSE', '')
         self.patch(r, 'ADSENSE_SLOT', '')
-        self.patch(r, 'AD_HEAD', '')
         self.captures = []
 
         def screenshot(source, target):
@@ -651,6 +650,13 @@ class WebTests(unittest.TestCase):
         r.regenerate(self.hist)
         self.assertEqual(len(self.captures), before)
         self.assertEqual(png.read_bytes(), b'preserve during HTML regeneration')
+
+    def test_share_card_loads_no_ads(self):
+        # Ads on the capture page keep the network busy and time out the screenshot.
+        self.patch(r, 'ADSENSE', 'ca-pub-fixture')
+        r.backfill(1)
+        self.assertTrue(self.captures)
+        self.assertNotIn('googlesyndication', self.captures[-1])
 
     def test_backfill_keeps_no_session_flag(self):
         day = '2026-10-16'

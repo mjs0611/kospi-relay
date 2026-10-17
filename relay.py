@@ -20,7 +20,6 @@ BINS = [(-9, -0.005, "강한 하락"), (-0.005, -0.003, "하락"), (-0.003, 0.00
 SITE_URL = os.environ.get("SITE_URL", "https://mjs0611.github.io/kospi-relay")
 ADSENSE_SLOT = os.environ.get("ADSENSE_SLOT", "")
 ADSENSE = os.environ.get("ADSENSE_CLIENT", "")  # ca-pub-… 저장소 변수. 비면 광고 스크립트 없음
-AD_HEAD = f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE}" crossorigin="anonymous"></script>' if ADSENSE else ""
 
 
 def fetch():
@@ -284,7 +283,7 @@ def share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>밤사이 코스피 · {D:%Y-%m-%d}</title>
 <meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
-<link rel="canonical" href="{SITE_URL}/{D:%Y-%m-%d}/">{AD_HEAD}
+<link rel="canonical" href="{SITE_URL}/{D:%Y-%m-%d}/">
 <meta property="og:type" content="article"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:url" content="{SITE_URL}/{D:%Y-%m-%d}/">
 <meta property="og:title" content="{html.escape(head['cond'])}"><meta property="og:description" content="{html.escape(head['claim'] or '오늘 코스피 시가')}">
 <meta property="og:image" content="{og_image or f'{SITE_URL}/{D:%Y-%m-%d}/relay.png'}"><meta property="og:image:width" content="1080"><meta name="twitter:card" content="summary_large_image">
