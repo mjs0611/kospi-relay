@@ -230,6 +230,83 @@ class WebTests(unittest.TestCase):
         self.assertIn('까지예요.', available)
         self.assertNotIn('가격 이력을 기다리고', available)
 
+    def test_orphan_date_pages_are_replaced_without_deleting_files(self):
+        self.write(legacy_record('2026-10-12'))
+        broken = self.site / 'days/2026-10-13.json'
+        broken.write_text('{broken json')
+        unreadable = self.write(legacy_record('2026-10-14'))
+        orphans = ('2026-10-13', '2026-10-14', '2026-10-15')
+        for date in (*orphans, 'not-a-date', '2026-02-30'):
+            folder = self.site / date
+            folder.mkdir()
+            (folder / 'index.html').write_text('<div>LEGACY_FREQ 987654</div>')
+            (folder / 'relay.png').write_bytes(b'preserved PNG')
+        snapshots = {p: p.read_bytes() for p in self.site.rglob('*') if p.is_file() and p.suffix != '.html'}
+        read_text = Path.read_text
+        def deny_read(path, *args, **kwargs):
+            if path == unreadable:
+                raise OSError('fixture unreadable')
+            return read_text(path, *args, **kwargs)
+        with patch.object(Path, 'read_text', deny_read):
+            r.regenerate(self.hist)
+        for date in orphans:
+            doc = self.read(date)
+            self.canonical(doc, date)
+            self.assertEqual(doc.find('h1')[0].text, '기록이 없어요')
+            self.assertEqual([n.attrs['content'] for n in doc.find('meta') if n.attrs.get('name') == 'robots'], ['noindex'])
+            self.assertIn(r.web_url(), doc.links())
+            self.assertNotIn('LEGACY_FREQ', doc.root.text)
+            self.assertNotIn('987654', doc.root.text)
+            self.assertFalse(doc.find('ins', 'adsbygoogle'))
+            self.assertIn(f'::warning::Replaced orphan date page {date}/index.html', self.output.getvalue())
+        for path, data in snapshots.items():
+            self.assertEqual(path.read_bytes(), data)
+        for name in ('not-a-date', '2026-02-30'):
+            self.assertIn('LEGACY_FREQ', self.read(name).root.text)
+        self.assertNotIn('noindex', [n.attrs.get('content') for n in self.read('2026-10-12').find('meta')])
+        # The cleanup must also run when no valid publication survives.
+        with patch.object(r, 'load_web_records', return_value=[]):
+            r.regenerate(self.hist)
+        self.assertEqual(self.read('2026-10-12').find('h1')[0].text, '기록이 없어요')
+
+    def test_frequency_counts_are_distinct_from_signed_results(self):
+        doc = Document(r.web_frequency_graph({'n': 40, 'up': 18, 'flat': 12, 'down': 10}, True))
+        self.assertEqual([n.text for n in doc.find(cls='frequency-value')],
+                         ['40번 중 18번(45%)', '40번 중 12번(30%)', '40번 중 10번(25%)'])
+        self.assertFalse(doc.find('strong'))
+        result = Document(r.web_result(legacy_record('2026-10-12'), True))
+        self.assertEqual([n.text for n in result.find('strong')], ['+1.23%', '-0.45%'])
+
+    def test_close_only_record_keeps_close_in_tables_and_qualifies_for_ads(self):
+        day = '2026-10-12'
+        record = legacy_record(day)
+        record['open'] = None
+        with patch.object(r, 'ADSENSE', 'ca-pub-fixture'), patch.object(r, 'ADSENSE_SLOT', '12345'):
+            for close in (-.0045, 0):
+                record['close'] = close
+                self.write(record)
+                self.write({**record, 'date': '2026-10-13'})
+                r.regenerate(self.hist)
+                self.assertEqual(len(self.read().find('ins', 'adsbygoogle')), 1)
+                self.write(legacy_record('2026-10-13', 'pending'))
+                r.regenerate(self.hist)
+                for route in ('', day, 'archive/2026-10'):
+                    rows = [n for n in self.read(route).find('tr') if n.attrs.get('data-date') == day]
+                    self.assertEqual(len(rows), 1)
+                    cells = rows[0].find('td')
+                    self.assertEqual(len(cells), 5)
+                    self.assertEqual(cells[-2].text, '기록이 없어요')
+                    self.assertEqual(cells[-1].text, r.pct(close))
+                self.assertEqual(len(self.read(day).find('ins', 'adsbygoogle')), 1)
+                self.assertFalse(self.read().find('ins', 'adsbygoogle'))
+            for status in ('pending', 'filled'):
+                stale_close = {**record, 'date': '2026-10-14', 'status': status}
+                self.write(stale_close)
+                r.regenerate(self.hist)
+                self.assertFalse(self.read().find('ins', 'adsbygoogle'))
+                rows = self.read().section('comparison').find('tr')
+                self.assertNotIn('2026-10-14', [n.attrs.get('data-date') for n in rows])
+
     def test_date_comparison_ends_on_selected_date_and_marks_current_row(self):
         days = ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02',
                 '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09',
@@ -557,7 +634,11 @@ class WebTests(unittest.TestCase):
         self.assertEqual(len(self.captures), 1)
         self.assertEqual(png.read_bytes(), b'unchanged publication PNG')
         changed_us = {**original['us'], 'SPY': [0, -.02]}
-        for key, value in [('status', 'filled'), ('open', .99), ('close', -.99), ('us', changed_us)]:
+        for key, value in [('status', 'filled'), ('open', .99), ('close', -.99), ('us', changed_us),
+                           ('freq', {**original['freq'], 'n': 987654}),
+                           ('head', {**original['head'], 'claim': 'stale claim'}),
+                           ('kr', '<svg>stale statistics</svg>'), ('sentence', 'stale sentence'),
+                           ('source_note', 'stale source note')]:
             archive.write_text(json.dumps({**original, key: value}))
             png.write_bytes(b'stale ' + key.encode())
             before = len(self.captures)

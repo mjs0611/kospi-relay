@@ -336,7 +336,7 @@ a{color:inherit;text-underline-offset:4px}button{font:inherit;color:inherit}a:fo
 .answer-band{display:grid;grid-template-columns:320px minmax(0,1fr);gap:40px;padding:8px 0 36px}.kospi-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px}
 .ny-area,.frequency-area,.result-area{min-width:0}.ny-area{padding-right:28px;border-right:1px solid var(--rule)}.graphic-row{margin:0 0 16px}.row-label{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:14px}.row-label strong{font-size:19px;font-weight:650}.ticker{font-size:12px;margin-left:6px}.source-state{display:block;font-size:12px;margin-top:3px}.source-state:empty{display:none}
 .ny-track{height:8px;position:relative;background:#F3F4F6;margin-top:8px}.ny-track:before{content:"";position:absolute;left:50%;top:-3px;height:14px;width:1px;background:var(--flat)}.ny-track i{position:absolute;height:8px;display:block;background:var(--flat)}
-.frequency-scale{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px}.frequency-track{height:12px;background:#F3F4F6;margin-top:7px}.frequency-track i{display:block;height:12px;background:var(--flat)}.frequency-area .row-label strong{font-size:18px}.sample-count{font-size:13px;margin:16px 0 0}.answer{font-size:14px;line-height:1.6;margin:18px 0 0}.empty{display:flex;align-items:center;min-height:172px;font-size:15px}
+.frequency-scale{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px}.frequency-track{height:12px;background:#F3F4F6;margin-top:7px}.frequency-track i{display:block;height:12px;background:var(--flat)}.frequency-value{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px;font-size:13px;font-weight:400}.frequency-value span{white-space:nowrap}.sample-count{font-size:13px;margin:16px 0 0}.answer{font-size:14px;line-height:1.6;margin:18px 0 0}.empty{display:flex;align-items:center;min-height:172px;font-size:15px}
 .result-basis{font-size:13px;margin:0 0 12px}.result-axis{display:flex;justify-content:space-between;font-size:12px;margin:0 0 16px}.result-axis span:nth-child(2){text-align:center}.result-track{position:relative;height:20px;margin:8px 8px 18px;border-bottom:1px solid var(--rule)}.result-track:before{content:"";position:absolute;width:1px;background:var(--flat);left:50%;top:0;height:25px}.result-mark{position:absolute;bottom:-6px;display:block;width:11px;height:11px;border-radius:50%;background:var(--flat);transform:translateX(-50%)}.result-mark.close{border-radius:0}.pending-value{font-size:14px!important;font-weight:500!important}
 .comparison{border-top:1px solid var(--rule);padding:28px 0 0}.section-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px}.section-heading a{font-size:14px}.comparison table,.archive-table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}.comparison th,.comparison td,.archive-table th,.archive-table td{padding:14px 8px;border-bottom:1px solid var(--rule);text-align:right;font-weight:500}.comparison th:first-child,.comparison td:first-child,.archive-table th:first-child,.archive-table td:first-child{text-align:left;width:19%}.comparison thead th,.archive-table thead th{font-size:13px}.comparison td a,.archive-table td a{font-weight:650}.cell-mark{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--flat);margin-right:5px;vertical-align:middle}.cell-wait{font-size:12px}.column-unit{display:block;font-size:12px;font-weight:400}.archive-table .no-record{text-align:center}.comparison .current-row{background:#F3F4F6}.comparison .current-row th{border-left:2px solid var(--ink)}.ad-slot{margin-top:32px;min-height:310px;border-top:1px solid var(--rule);padding-top:12px;font-size:12px}.ad-slot ins{display:block;height:280px}
 .site-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;border-top:1px solid var(--rule);padding:24px 0 32px;margin-top:48px;font-size:12px}.site-footer nav{display:flex;gap:20px}.share{background:#FFF;border:1px solid var(--rule);border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer}.share:not([hidden]){display:inline-block}.prose{max-width:720px}.prose p,.prose li{line-height:1.8}.method-table{width:100%;border-collapse:collapse}.method-table td,.method-table th{text-align:left;padding:10px;border-bottom:1px solid var(--rule)}
@@ -350,10 +350,11 @@ def web_url(path=""):
     return SITE_URL.rstrip("/") + "/" + path.lstrip("/")
 
 
-def web_shell(title, path, body, description=None, image_day=None, share_day=None):
+def web_shell(title, path, body, description=None, image_day=None, share_day=None, noindex=False):
     e = html.escape
     url = web_url(path)
     description = description or title
+    robots_meta = '<meta name="robots" content="noindex">' if noindex else ''
     image_meta = f'<meta property="og:image" content="{e(web_url(image_day + "/relay.png"))}"><meta name="twitter:card" content="summary_large_image">' if image_day else ""
     share_script = ""
     if share_day:
@@ -370,7 +371,7 @@ shareButton.addEventListener('click', async function () {{
 </script>"""
     ad_head = f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={e(ADSENSE)}" crossorigin="anonymous"></script>' if ADSENSE else ""
     return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{e(title)} | 밤사이 코스피</title><meta name="description" content="{e(description)}">
+<title>{e(title)} | 밤사이 코스피</title><meta name="description" content="{e(description)}">{robots_meta}
 <link rel="canonical" href="{e(url)}"><meta property="og:url" content="{e(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(description)}">{image_meta}{ad_head}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>{WEB_CSS}</style></head><body><div class="wrap">
@@ -438,7 +439,7 @@ def web_frequency_graph(f, latest, no_session=False):
         rows = []
         for z in ("up", "flat", "down"):
             share = f[z] / n
-            rows.append(f'<div class="graphic-row"><div class="row-label"><span>{LABEL_Z[z]}</span><strong>{share:.0%}</strong></div><div class="frequency-track" aria-hidden="true"><i style="width:{share * 100:.3f}%;background:var(--{z})"></i></div></div>')
+            rows.append(f'<div class="graphic-row"><div class="row-label"><span>{LABEL_Z[z]}</span><span class="frequency-value"><span>{n:,}번 중 {f[z]:,}번</span><span>({share:.0%})</span></span></div><div class="frequency-track" aria-hidden="true"><i style="width:{share * 100:.3f}%;background:var(--{z})"></i></div></div>')
         majority = max(("up", "down", "flat"), key=lambda z: f[z])
         content = '<div class="frequency-scale"><span>과거 시가 빈도</span><span>0~100%</span></div>' + ''.join(rows) + f'<p class="sample-count">비슷한 밤 {n:,}번</p><p class="answer">코스피는 {tenths(f[majority] / n)} {WENT[majority]}</p>'
     return f'<section class="frequency-area" aria-labelledby="frequency-title" data-sample-count="{n}"><h2 id="frequency-title">비슷한 밤 다음에는</h2>{content}</section>'
@@ -472,6 +473,10 @@ def korean_date(value):
     return f'{parts[0]}년 {parts[1]}월' + (f' {parts[2]}일' if len(parts) == 3 else '')
 
 
+def has_kospi_data(record):
+    return record.get("open") is not None or (record.get("status") == "done" and record.get("close") is not None)
+
+
 def record_table(records, latest_date, current_date=None, archive=False):
     """Share columns, missing values and provenance across recent/month tables."""
     rows = []
@@ -486,7 +491,7 @@ def record_table(records, latest_date, current_date=None, archive=False):
                 stamp = korean_date(source_date) if source_date else '기준일 미확인'
                 cell += f'<span class="source-state" title="기존 게시값 {stamp}">기존 값</span>'
             cells.append(f'<td>{cell}</td>')
-        if r.get("open") is None and not latest:
+        if not has_kospi_data(r) and not latest:
             cells.append('<td colspan="2" class="no-record">기록이 없어요</td>')
         else:
             cells += [f'<td>{web_value(r.get("open"), "시가 대기" if latest else "기록이 없어요")}</td>',
@@ -498,7 +503,7 @@ def record_table(records, latest_date, current_date=None, archive=False):
 
 
 def comparison_table(records, as_of):
-    recent = [r for r in records if r["date"] <= as_of and r.get("open") is not None][:5]
+    recent = [r for r in records if r["date"] <= as_of and has_kospi_data(r)][:5]
     latest_date = records[0]["date"]
     if recent:
         return record_table(recent, latest_date, current_date=as_of)
@@ -523,7 +528,7 @@ def web_day(record, records, hist, home=False):
     band = '<div class="answer-band">' + web_ny(record, latest) + '<div class="kospi-side">' + web_frequency_graph(f, latest, no_us_session(record)) + web_result(record, latest) + '</div></div>'
     table = f'<section class="comparison" id="records"><div class="section-heading"><h2>최근 5거래일 비교</h2><a href="{html.escape(web_url("archive/" + date[:7] + "/"))}">월별 기록 보기</a></div>{comparison_table(records, date)}</section>'
     ad = ""
-    if ADSENSE and ADSENSE_SLOT and record.get("open") is not None:
+    if ADSENSE and ADSENSE_SLOT and has_kospi_data(record):
         ad = f'<aside class="ad-slot" aria-label="광고"><div>광고</div><ins class="adsbygoogle" data-ad-client="{html.escape(ADSENSE)}" data-ad-slot="{html.escape(ADSENSE_SLOT)}" data-ad-format="horizontal" data-full-width-responsive="true"></ins></aside><script>(window.adsbygoogle = window.adsbygoogle || []).push({{}});</script>'
     return web_shell(title, "" if home else date + "/", heading + nav + band + table + ad,
                      description=f'{date} 뉴욕 세 지표와 비슷한 밤의 과거 빈도, 코스피 시가와 종가를 함께 봐요', image_day=date, share_day=date)
@@ -604,6 +609,18 @@ def regenerate(hist=None):
             hist = pd.DataFrame(columns=["gap", "s"], index=pd.DatetimeIndex([]))
     records = load_web_records()
     SITE.mkdir(parents=True, exist_ok=True)
+    valid_dates = {r["date"] for r in records}
+    for page in sorted(SITE.glob("*/index.html")):
+        date = page.parent.name
+        try:
+            if dt.date.fromisoformat(date).isoformat() != date:
+                continue
+        except ValueError:
+            continue
+        if date not in valid_dates:
+            body = f'<div class="page-heading"><h1>기록이 없어요</h1></div><p><a href="{html.escape(web_url())}">최신 기록 보기</a></p>'
+            page.write_text(web_shell(f"{date} 기록이 없어요", date + "/", body, noindex=True), encoding="utf-8")
+            print(f"::warning::Replaced orphan date page {date}/index.html: no valid record")
     months = sorted({r["date"][:7] for r in records}, reverse=True)
     if records:
         (SITE / "index.html").write_text(web_day(records[0], records, hist, home=True), encoding="utf-8")
@@ -806,7 +823,7 @@ def backfill(n):
             "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
             "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}
         # Backfill repairs changed publications; HTML regeneration never touches PNGs.
-        changed = any(saved.get(key) != payload[key] for key in ("status", "open", "close", "us"))
+        changed = any(saved.get(key) != payload[key] for key in ("status", "open", "close", "us", "freq", "head", "kr", "sentence", "source_note"))
         if changed or not (day / "relay.png").exists():
             screenshot_card(share_card_page(D, prev, us, vix_lv, opened, f, status, None, None,
                                            source_note=source_note, source_states=source_states), day / "relay.png")
