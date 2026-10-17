@@ -9,7 +9,7 @@ keep.update({"page", "pending_text"})
 mod = ast.Module(body=[n for n in tree.body
                        if (isinstance(n, ast.FunctionDef) and n.name in keep)
                        or (isinstance(n, ast.Assign) and any(getattr(t, "id", None) in keep for t in n.targets))], type_ignores=[])
-ns = {"html": html, "json": json, "SITE_URL": "https://example.com"}; exec(compile(mod, "relay-slice", "exec"), ns)
+ns = {"html": html, "json": json, "SITE_URL": "https://example.com", "AD_HEAD": ""}; exec(compile(mod, "relay-slice", "exec"), ns)
 headline, zone_of, sentence, ny_svg, kr_svg, FLAT = ns["headline"], ns["zone_of"], ns["sentence"], ns["ny_svg"], ns["kr_svg"], ns["FLAT"]
 
 f = {"n": 541, "up": 174, "flat": 277, "down": 90, "bin": "보합", "years": 5.6}

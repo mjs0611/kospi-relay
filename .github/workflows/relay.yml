@@ -36,6 +36,8 @@ jobs:
         env:
           PHASE: ${{ inputs.phase || 'morning' }}
           RELAY_DATE: ${{ github.event.inputs.date }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://mjs0611.github.io/kospi-relay' }}
+          ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

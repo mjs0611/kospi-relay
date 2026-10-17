@@ -18,6 +18,8 @@ LABEL = {"SOXX": "반도체", "QQQ": "나스닥100", "SPY": "S&P500"}
 FLAT = 0.003          # 시가 갭 ±0.3% = 보합
 BINS = [(-9, -0.005, "강한 하락"), (-0.005, -0.003, "하락"), (-0.003, 0.003, "보합"), (0.003, 0.005, "상승"), (0.005, 9, "강한 상승")]
 SITE_URL = os.environ.get("SITE_URL", "https://mjs0611.github.io/kospi-relay")
+ADSENSE = os.environ.get("ADSENSE_CLIENT", "")  # ca-pub-… 저장소 변수. 비면 광고 스크립트 없음
+AD_HEAD = f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE}" crossorigin="anonymous"></script>' if ADSENSE else ""
 
 
 def fetch():
@@ -279,6 +281,7 @@ def page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None, og_image=
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>밤사이 코스피 · {D:%Y-%m-%d}</title>
 <meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
+<link rel="canonical" href="{SITE_URL}/{D:%Y-%m-%d}/">{AD_HEAD}
 <meta property="og:type" content="article"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:url" content="{SITE_URL}/{D:%Y-%m-%d}/">
 <meta property="og:title" content="{html.escape(head['cond'])}"><meta property="og:description" content="{html.escape(head['claim'] or '오늘 코스피 시가')}">
 <meta property="og:image" content="{og_image or f'{SITE_URL}/{D:%Y-%m-%d}/relay.png'}"><meta property="og:image:width" content="1080"><meta name="twitter:card" content="summary_large_image">
@@ -306,7 +309,7 @@ footer a{{color:#2C5FD6}}
 </style></head><body><div class="sheet">
 <section class="night"><p class="brand">밤사이 코스피</p>{head_html(head)[0]}<p class="lab">뉴욕 지표</p>{ny}</section>
 <section class="day"><p class="stamp">{date_ko} <b>{stamp_t}</b></p>{head_html(head)[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}{f'<p class="tail">{html.escape(tail)}</p>' if tail else ''}{f'<p class="cap">{html.escape(source_note)}</p>' if source_note else ''}</section>
-<footer><span>정보 제공용, 투자 판단 자료 아님</span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}<button class="share" type="button">공유</button></span></footer>
+<footer><span>정보 제공용, 투자 판단 자료 아님 · <a href="../privacy/">개인정보처리방침</a></span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}<button class="share" type="button">공유</button></span></footer>
 <script>
 /* 공유: Web Share가 있으면 시스템 공유 시트, 없으면 링크 복사. 링크는 이 날짜 페이지(OG 카드 붙음) */
 document.querySelector('.share').addEventListener('click', async function () {{
@@ -443,6 +446,30 @@ def write_index():
         except Exception: z = None
         rows.append({"d": q.stem, "z": z})
     (SITE / "index.json").write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+    write_site_files([r["d"] for r in rows])
+
+
+PRIVACY = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>개인정보처리방침 · 밤사이 코스피</title><style>body{font:15px/1.7 -apple-system,"Apple SD Gothic Neo",sans-serif;max-width:640px;margin:0 auto;padding:24px 16px;color:#10172A;background:#FFF}h1{font-size:20px}h2{font-size:16px;margin-top:28px}</style></head><body>
+<h1>개인정보처리방침</h1>
+<p>디토엑시스(이하 "운영자")는 밤사이 코스피 웹사이트에서 회원가입이나 개인정보 입력을 받지 않습니다.</p>
+<h2>광고와 쿠키</h2>
+<p>이 사이트는 Google AdSense 광고를 게재할 수 있습니다. Google을 비롯한 제3자 공급업체는 쿠키를 사용해 사용자가 이 사이트나 다른 웹사이트를 방문한 기록을 바탕으로 광고를 게재합니다. 사용자는 <a href="https://adssettings.google.com">Google 광고 설정</a>에서 맞춤 광고를 끌 수 있습니다. 자세한 내용은 <a href="https://policies.google.com/technologies/ads">Google 광고 정책</a>을 참고하십시오.</p>
+<h2>문의</h2>
+<p>디토엑시스 · help.ditoaxis@gmail.com</p>
+<p><a href="../">밤사이 코스피로 돌아가기</a></p>
+</body></html>"""
+
+
+def write_site_files(days):
+    """검색·광고 심사용 정적 파일. SITE_URL이 github.io가 아니면 CNAME도 쓴다(Pages 커스텀 도메인)."""
+    (SITE / "privacy").mkdir(exist_ok=True); (SITE / "privacy" / "index.html").write_text(PRIVACY, encoding="utf-8")
+    urls = [f"{SITE_URL}/"] + [f"{SITE_URL}/{d}/" for d in days]
+    (SITE / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+                                      + "".join(f"<url><loc>{u}</loc></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
+    (SITE / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
+    host = SITE_URL.split("//", 1)[1].split("/", 1)[0]
+    if not host.endswith("github.io"): (SITE / "CNAME").write_text(host + "\n", encoding="utf-8")
 
 
 def backfill(n):
