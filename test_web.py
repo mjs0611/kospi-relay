@@ -102,6 +102,25 @@ class Clock(r.dt.datetime):
 
 
 class WebTests(unittest.TestCase):
+    def test_keyboard_table_region_preserves_all_market_columns(self):
+        record = legacy_record('2026-09-23')
+        doc = Document(r.record_table([record], record['date'], archive=True))
+        region = doc.section('table-scroll')
+        self.assertEqual(region.attrs.get('role'), 'region')
+        self.assertEqual(region.attrs.get('tabindex'), '0')
+        self.assertTrue(region.attrs.get('aria-label'))
+        table = region.find('table')[0]
+        self.assertEqual(len(table.find('thead')[0].find('th')), 6)
+        self.assertEqual(len(table.find('tbody')[0].find('td')), 5)
+        self.assertEqual(table.find('tbody')[0].find('a')[0].attrs['href'], r.web_url('2026-09-23/'))
+
+    def test_company_return_and_skip_link_reach_focusable_main(self):
+        doc = Document(r.web_shell('검토', '', '<h1>검토</h1>'))
+        self.assertIn('https://ditoaxis.com/#products', doc.links())
+        self.assertIn('#main', doc.links())
+        self.assertEqual(doc.find('main')[0].attrs.get('id'), 'main')
+        self.assertEqual(doc.find('main')[0].attrs.get('tabindex'), '-1')
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
