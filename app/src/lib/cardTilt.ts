@@ -6,6 +6,7 @@
 
 const MAX_DEG = 6;
 const STYLE_ID = 'card-tilt-style';
+const INTERACTIVE = 'button, a, input, select, textarea, label, summary, [role="button"], [role="link"], [role="tab"], [role="switch"], [role="checkbox"]';
 const CSS = `
 :where([data-card-tilt]) { position: relative; }
 [data-card-tilt] { will-change: transform; user-select: none; -webkit-user-select: none; }
@@ -63,6 +64,10 @@ export function installCardTilt(selector: string): () => void {
     const target = e.target as Element | null;
     const next = target?.closest?.(selector) as HTMLElement | null;
     if (!next || target?.closest('[data-no-tilt]')) return;
+    // A press that starts on a button or link inside the card must not move it: on touch devices the click
+    // retargets to the card and the inner button's handler never runs (mainquest 2026-08-10).
+    const control = target?.closest(INTERACTIVE);
+    if (control && control !== next && next.contains(control)) return;
     cancelAnimationFrame(frame); frame = 0;
     if (card !== next) { clear(); card = next; base = next.style.transform || ''; }
     card.dataset.cardTilt = ''; pointer = e.pointerId; follow(e);
