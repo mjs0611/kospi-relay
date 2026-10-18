@@ -5,6 +5,8 @@ python relay.py open      # 09:06 KST: 오늘 시가 채움
 python relay.py selfcheck # 정렬·빈도 자기검증
 """
 import json, os, sys, html, datetime as dt
+import hashlib, re
+from html.parser import HTMLParser
 from pathlib import Path
 import shutil, time
 import pandas as pd, numpy as np, yfinance as yf
@@ -356,7 +358,7 @@ def web_url(path=""):
     return SITE_URL.rstrip("/") + "/" + path.lstrip("/")
 
 
-WEB_TABLE_SCRIPT = """<script>
+WEB_TABLE_SCRIPT = """<script id="market-table-keys">
 document.querySelectorAll('.table-scroll').forEach(region => {
   region.addEventListener('keydown', event => {
     if (event.target !== region || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || region.scrollWidth <= region.clientWidth) return;
@@ -580,6 +582,76 @@ def web_about(hist):
 <h2>언제 새로고침하나요?</h2><p>한국 시간 평일 06:45에 뉴욕 자료, 09:06에 코스피 시가, 15:40에 종가를 반영하도록 실행해요. 자료가 늦게 오거나 실행이 지연되면 이후 재시도에서 채워요. 관측값이 없다는 이유만으로 휴장이라고 표시하지 않아요.</p>
 <h2>자료와 운영</h2><p>가격 자료는 Yahoo Finance에서 받아요. 운영자는 디토엑시스예요. 문의는 <a href="mailto:help.ditoaxis@gmail.com">help.ditoaxis@gmail.com</a>으로 보내주세요.</p><p><a href="{html.escape(web_url('privacy/'))}">개인정보처리방침 보기</a></p></article>'''
     return web_shell("집계 기준", "about/", body)
+
+
+def restyle():
+    """Apply presentation to existing published HTML without any price lookup.
+
+    Historical frequencies stay in their published markup. No JSON, image,
+    domain, advertising configuration or financial text is regenerated.
+    """
+    if not (SITE / 'index.html').is_file() or not (SITE / 'latest.json').is_file():
+        raise RuntimeError('A restored published site is required; no bootstrap in restyle mode')
+    latest = json.loads((SITE / 'latest.json').read_text())
+    if not isinstance(latest, dict) or dt.date.fromisoformat(latest['date']).isoformat() != latest['date']:
+        raise RuntimeError('Published latest record is invalid')
+
+    def protected():
+        return {str(p.relative_to(SITE)): hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in SITE.rglob('*') if p.is_file() and '.git' not in p.relative_to(SITE).parts
+                and p.suffix != '.html'}
+
+    def main_text(source):
+        bodies = re.findall(r'<main(?:\s[^>]*)?>(.*?)</main>', source, re.S)
+        if len(bodies) != 1:
+            raise RuntimeError('Expected one published main; refusing to guess at the template')
+        body = re.sub(r'<p class="table-hint">.*?</p>', '', bodies[0], flags=re.S)
+        class Text(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.parts = []
+            def handle_data(self, value):
+                self.parts.append(value)
+        parser = Text()
+        parser.feed(body)
+        return ' '.join(''.join(parser.parts).split())
+
+    before = protected()
+    updates = {}
+    table_pattern = r'(<table class="(?:comparison-table|archive-table)".*?</table>)'
+    for page in sorted(SITE.rglob('*.html')):
+        source = page.read_text(encoding='utf-8')
+        if '<header class="site-header">' not in source:
+            if page == SITE / 'index.html':
+                raise RuntimeError('Published homepage template is unknown')
+            continue  # Share images/privacy templates remain exactly as published.
+        text, count = re.subn(r'<style>.*?</style>', lambda _: '<style>' + WEB_CSS + '</style>', source, count=1, flags=re.S)
+        if count != 1:
+            raise RuntimeError(f'Missing published stylesheet in {page.name}')
+        if 'class="service-family"' not in text:
+            old = '<body><div class="wrap">'
+            if old not in text:
+                raise RuntimeError('Published shell is unknown; refusing partial update')
+            text = text.replace(old, '<body><a class="skip" href="#main">본문으로 이동</a><div class="wrap"><nav class="service-family" aria-label="디토엑시스"><a href="https://ditoaxis.com/#products"><span class="axis-mark" aria-hidden="true">+</span>디토엑시스 서비스<span aria-hidden="true">↗</span></a></nav>', 1)
+        text = re.sub(r'<main(?:\s[^>]*)?>', '<main id="main" tabindex="-1">', text, count=1)
+        tables = re.findall(table_pattern, text, re.S)
+        if 'class="table-scroll"' not in text:
+            text = re.sub(table_pattern, r'<p class="table-hint">표를 좌우로 밀어 모든 항목을 볼 수 있어요.</p><div class="table-scroll" role="region" aria-label="시장 기록 비교표, 좌우로 스크롤" tabindex="0">\1</div>', text, flags=re.S)
+        elif text.count('class="table-scroll"') != len(tables):
+            raise RuntimeError('Mixed table templates; refusing partial update')
+        text = re.sub(r'<script id="market-table-keys">.*?</script>', '', text, flags=re.S)
+        if tables:
+            text = text.replace('</body>', WEB_TABLE_SCRIPT + '</body>')
+        if main_text(source) != main_text(text) or re.findall(table_pattern, source, re.S) != re.findall(table_pattern, text, re.S):
+            raise RuntimeError(f'Published financial content changed in {page.name}')
+        updates[page] = text
+    if SITE / 'index.html' not in updates:
+        raise RuntimeError('No published homepage to restyle')
+    for page, text in updates.items():
+        page.write_text(text, encoding='utf-8')
+    if protected() != before:
+        raise RuntimeError('Published non-HTML files changed; refusing publication')
+    print(f'restyled {len(updates)} existing pages; financial text, tables and non-HTML hashes unchanged')
 
 
 def load_web_records():
@@ -891,4 +963,4 @@ def selfcheck():
 
 if __name__ == "__main__":
     {"morning": lambda: build("morning"), "open": lambda: build("open"), "close": lambda: build("close"), "selfcheck": selfcheck,
-     "backfill": lambda: backfill(int(sys.argv[2]) if len(sys.argv) > 2 else 20), "regenerate": regenerate}[sys.argv[1]]()
+     "backfill": lambda: backfill(int(sys.argv[2]) if len(sys.argv) > 2 else 20), "regenerate": regenerate, "restyle": restyle}[sys.argv[1]]()

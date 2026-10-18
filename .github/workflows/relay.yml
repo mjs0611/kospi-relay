@@ -15,7 +15,7 @@ on:
       phase:
         description: 실행 단계 (오늘 자료는 실제 실행 시각으로 보정)
         type: choice
-        options: [morning, open, close, backfill]
+        options: [morning, open, close, backfill, restyle]
         default: morning
       date: { description: "YYYY-MM-DD (재현용, 비우면 오늘)", type: string, default: "" }
       days: { description: "backfill 거래일 수", type: string, default: "20" }

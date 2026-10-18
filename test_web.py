@@ -102,6 +102,42 @@ class Clock(r.dt.datetime):
 
 
 class WebTests(unittest.TestCase):
+    def restyle_fixture(self):
+        source = '<!doctype html><html lang="ko"><head><title>기존 기록</title><style>old</style></head><body><div class="wrap"><header class="site-header">밤사이 코스피</header><main><h1>기록</h1><p>수치는 +1.23% · 자료 대기</p><table class="comparison-table"><thead><tr><th>날짜</th><th>시가</th></tr></thead><tbody><tr><th>09/23</th><td>+1.23%</td></tr></tbody></table></main></div></body></html>'
+        (self.site / 'index.html').write_text(source)
+        (self.site / 'latest.json').write_text('{"date":"2026-09-23","open":0.0123}')
+        (self.site / 'relay.png').write_bytes(b'published fixture image')
+        (self.site / 'CNAME').write_text('kospi.ditoaxis.com\n')
+        return source
+
+    def test_restyle_preserves_published_values_files_and_is_idempotent_without_fetch(self):
+        source = self.restyle_fixture()
+        protected = {p.name: p.read_bytes() for p in self.site.iterdir() if p.suffix != '.html'}
+        r.restyle()
+        once = (self.site / 'index.html').read_text()
+        self.assertIn('수치는 +1.23% · 자료 대기', once)
+        self.assertEqual(once.count('id="market-table-keys"'), 1)
+        self.assertEqual(once.count('class="table-scroll"'), 1)
+        r.restyle()
+        self.assertEqual((self.site / 'index.html').read_text(), once)
+        self.assertEqual({p.name: p.read_bytes() for p in self.site.iterdir() if p.suffix != '.html'}, protected)
+        self.fetch.assert_not_called()
+        self.assertFalse(self.captures)
+
+    def test_restyle_unknown_template_fails_before_any_html_write(self):
+        source = self.restyle_fixture()
+        (self.site / 'broken.html').write_text('<header class="site-header">unknown</header><main>old</main>')
+        with self.assertRaises(RuntimeError):
+            r.restyle()
+        self.assertEqual((self.site / 'index.html').read_text(), source)
+        self.fetch.assert_not_called()
+
+    def test_restyle_missing_publication_never_bootstraps(self):
+        with self.assertRaises(RuntimeError):
+            r.restyle()
+        self.assertEqual(list(self.site.iterdir()), [])
+        self.fetch.assert_not_called()
+
     def test_keyboard_table_region_preserves_all_market_columns(self):
         record = legacy_record('2026-09-23')
         doc = Document(r.record_table([record], record['date'], archive=True))
