@@ -125,7 +125,7 @@ class WebTests(unittest.TestCase):
         self.assertFalse(self.captures)
 
     def assert_web_analytics(self, doc):
-        loaders = [n for n in doc.find('script') if n.attrs.get('src') == 'https://ditoaxis.com/m.js']
+        loaders = [n for n in doc.find('script') if 'ditoaxis.com/m.js' in n.attrs.get('src', '')]
         self.assertEqual(len(loaders), 1)
         self.assertEqual(loaders[0].attrs, {'defer': None, 'src': 'https://ditoaxis.com/m.js'})
         self.assertIn(loaders[0], doc.find('head')[0].find('script'))
@@ -172,9 +172,11 @@ class WebTests(unittest.TestCase):
         privacy = r.PRIVACY.replace(r.WEB_ANALYTICS, '').replace(r.WEB_ANALYTICS_NOTICE, '')
         (self.site / 'privacy').mkdir()
         (self.site / 'legacy').mkdir()
-        legacy = '<!doctype html><html><head><title>공유 기록</title></head><body><p>기존 공개 내용</p></body></html>'
+        legacy = '<!doctype html><html><head><title>공유 기록</title></head><body><p>기존 공개 내용</p><script src="https://ditoaxis.com/m.js"></script></body></html>'
         for existing in ('', r.WEB_ANALYTICS,
-                         r.WEB_ANALYTICS + "<script src='https://ditoaxis.com/m.js' defer></script>"):
+                         r.WEB_ANALYTICS + "<script src='https://ditoaxis.com/m.js' defer></script>",
+                         '<script defer src="//ditoaxis.com/m.js"></script>',
+                         '<script defer src="https://ditoaxis.com/m.js?v=1"></script>'):
             with self.subTest(existing=existing):
                 (self.site / 'index.html').write_text(source.replace('</head>', ad + existing + '</head>'))
                 (self.site / 'privacy/index.html').write_text(privacy)
@@ -201,16 +203,19 @@ class WebTests(unittest.TestCase):
 
     def test_restyle_unknown_template_fails_before_any_html_write(self):
         source = self.restyle_fixture()
-        (self.site / 'broken.html').write_text('<html><head><title>unknown</title></head><body><header class="site-header">unknown</header><main>old</main></body></html>')
-        with self.assertRaises(RuntimeError):
-            r.restyle()
-        self.assertEqual((self.site / 'index.html').read_text(), source)
+        for broken in ('<html><head><title>unknown</title></head><body><header class="site-header">unknown</header><main>old</main></body></html>',
+                       '<header class="site-header">unknown</header><main>old</main>'):
+            with self.subTest(broken=broken):
+                (self.site / 'broken.html').write_text(broken)
+                with self.assertRaises(RuntimeError):
+                    r.restyle()
+                self.assertEqual((self.site / 'index.html').read_text(), source)
         self.fetch.assert_not_called()
 
     def test_restyle_warns_and_leaves_headless_html_unchanged(self):
         self.restyle_fixture()
         headless = self.site / 'fragment.html'
-        source = '<header class="site-header">기존 조각</header><main>수치는 +1.23%</main>\r\n'.encode('utf-8')
+        source = '<div class="share">기존 조각</div><main>수치는 +1.23%</main>\r\n'.encode('utf-8')
         headless.write_bytes(source)
         for _ in range(2):
             r.restyle()

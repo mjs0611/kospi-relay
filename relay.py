@@ -590,15 +590,17 @@ def web_about(hist):
 
 
 def add_web_analytics(source):
-    """Add the shared web loader once, or return None when no head is present."""
-    head = re.search(r'<head\b[^>]*>.*?</head\s*>', source, re.I | re.S)
-    if head is None:
+    """Leave exactly one canonical loader in the head, or return None when no head is present."""
+    if re.search(r'<head\b[^>]*>.*?</head\s*>', source, re.I | re.S) is None:
         return None
-    text = head[0]
-    loader = r'<script\b[^>]*\ssrc\s*=\s*([\'"])https://ditoaxis\.com/m\.js\1[^>]*>\s*</script\s*>'
-    if len(re.findall(loader, text, re.I)) == 1 and WEB_ANALYTICS in text:
+    # Any older form anywhere in the page (body, scheme-relative, query string) counts as a loader.
+    loader = r'<script\b[^>]*\ssrc\s*=\s*([\'"])(?:https:)?//ditoaxis\.com/m\.js(?:\?[^\'"]*)?\1[^>]*>\s*</script\s*>'
+    head = re.search(r'<head\b[^>]*>.*?</head\s*>', source, re.I | re.S)
+    if len(re.findall(loader, source, re.I)) == 1 and WEB_ANALYTICS in head[0]:
         return source
-    text = re.sub(loader, '', text, flags=re.I)
+    source = re.sub(loader, '', source, flags=re.I)
+    head = re.search(r'<head\b[^>]*>.*?</head\s*>', source, re.I | re.S)
+    text = head[0]
     ad = re.search(r'<script\b[^>]*\ssrc\s*=\s*([\'"])https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js(?:\?[^\'"]*)?\1[^>]*>\s*</script\s*>', text, re.I)
     if ad:
         text = text[:ad.end()] + '\n' + WEB_ANALYTICS + text[ad.end():]
@@ -646,7 +648,7 @@ def restyle():
         source = page.read_text(encoding='utf-8')
         text = add_web_analytics(source)
         if text is None:
-            if page in (SITE / 'index.html', SITE / 'privacy' / 'index.html'):
+            if page in (SITE / 'index.html', SITE / 'privacy' / 'index.html') or '<header class="site-header">' in source:
                 raise RuntimeError(f'Missing published head in {page.relative_to(SITE)}; refusing partial update')
             print(f'::warning::Skipped headless HTML {page.relative_to(SITE)}; left unchanged')
             continue
