@@ -22,6 +22,10 @@ BINS = [(-9, -0.005, "강한 하락"), (-0.005, -0.003, "하락"), (-0.003, 0.00
 SITE_URL = os.environ.get("SITE_URL", "https://mjs0611.github.io/kospi-relay")
 ADSENSE_SLOT = os.environ.get("ADSENSE_SLOT", "")
 ADSENSE = os.environ.get("ADSENSE_CLIENT", "")  # ca-pub-… 저장소 변수. 비면 광고 스크립트 없음
+WEB_ANALYTICS = '<script defer src="https://ditoaxis.com/m.js"></script>'
+WEB_ANALYTICS_NOTICE = """<h2>방문 통계</h2>
+<p><a href="https://www.cloudflare.com/web-analytics/">Cloudflare Web Analytics</a>로 방문 통계(페이지 주소, 유입 경로, 브라우저·기기 종류, 국가, 로딩 성능)를 수집합니다. 쿠키나 기기 식별자를 사용하지 않으며, 개인을 알아볼 수 없는 집계로만 확인합니다.</p>
+"""
 
 
 def fetch():
@@ -395,6 +399,7 @@ shareButton.addEventListener('click', async function () {{
     return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{e(title)} | 밤사이 코스피</title><meta name="description" content="{e(description)}">{robots_meta}
 <link rel="canonical" href="{e(url)}"><meta property="og:url" content="{e(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(description)}">{image_meta}{ad_head}
+{WEB_ANALYTICS}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>{WEB_CSS}</style></head><body><a class="skip" href="#main">본문으로 이동</a><div class="wrap">
 <nav class="service-family" aria-label="디토엑시스"><a href="https://ditoaxis.com/#products"><span class="axis-mark" aria-hidden="true">+</span>디토엑시스 서비스<span aria-hidden="true">↗</span></a></nav>
@@ -584,6 +589,24 @@ def web_about(hist):
     return web_shell("집계 기준", "about/", body)
 
 
+def add_web_analytics(source):
+    """Add the shared web loader once, or return None when no head is present."""
+    head = re.search(r'<head\b[^>]*>.*?</head\s*>', source, re.I | re.S)
+    if head is None:
+        return None
+    text = head[0]
+    loader = r'<script\b[^>]*\ssrc\s*=\s*([\'"])https://ditoaxis\.com/m\.js\1[^>]*>\s*</script\s*>'
+    if len(re.findall(loader, text, re.I)) == 1 and WEB_ANALYTICS in text:
+        return source
+    text = re.sub(loader, '', text, flags=re.I)
+    ad = re.search(r'<script\b[^>]*\ssrc\s*=\s*([\'"])https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js(?:\?[^\'"]*)?\1[^>]*>\s*</script\s*>', text, re.I)
+    if ad:
+        text = text[:ad.end()] + '\n' + WEB_ANALYTICS + text[ad.end():]
+    else:
+        text = re.sub(r'</head\s*>', lambda _: WEB_ANALYTICS + '\n</head>', text, count=1, flags=re.I)
+    return source[:head.start()] + text + source[head.end():]
+
+
 def restyle():
     """Apply presentation to existing published HTML without any price lookup.
 
@@ -621,11 +644,22 @@ def restyle():
     table_pattern = r'(<table class="(?:comparison-table|archive-table)".*?</table>)'
     for page in sorted(SITE.rglob('*.html')):
         source = page.read_text(encoding='utf-8')
+        text = add_web_analytics(source)
+        if text is None:
+            if page in (SITE / 'index.html', SITE / 'privacy' / 'index.html'):
+                raise RuntimeError(f'Missing published head in {page.relative_to(SITE)}; refusing partial update')
+            print(f'::warning::Skipped headless HTML {page.relative_to(SITE)}; left unchanged')
+            continue
+        if page == SITE / 'privacy' / 'index.html' and 'https://www.cloudflare.com/web-analytics/' not in text:
+            if '<h2>문의</h2>' not in text:
+                raise RuntimeError('Published privacy template is unknown; refusing partial update')
+            text = text.replace('<h2>문의</h2>', WEB_ANALYTICS_NOTICE + '<h2>문의</h2>', 1)
         if '<header class="site-header">' not in source:
             if page == SITE / 'index.html':
                 raise RuntimeError('Published homepage template is unknown')
-            continue  # Share images/privacy templates remain exactly as published.
-        text, count = re.subn(r'<style>.*?</style>', lambda _: '<style>' + WEB_CSS + '</style>', source, count=1, flags=re.S)
+            updates[page] = text
+            continue  # Other templates receive only analytics and the privacy notice.
+        text, count = re.subn(r'<style>.*?</style>', lambda _: '<style>' + WEB_CSS + '</style>', text, count=1, flags=re.S)
         if count != 1:
             raise RuntimeError(f'Missing published stylesheet in {page.name}')
         if 'class="service-family"' not in text:
@@ -869,11 +903,13 @@ def write_index():
 
 
 PRIVACY = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+""" + WEB_ANALYTICS + """
 <title>개인정보처리방침 · 밤사이 코스피</title><style>body{font:15px/1.7 -apple-system,"Apple SD Gothic Neo",sans-serif;max-width:640px;margin:0 auto;padding:24px 16px;color:#10172A;background:#FFF}h1{font-size:20px}h2{font-size:16px;margin-top:28px}</style></head><body>
 <h1>개인정보처리방침</h1>
 <p>디토엑시스(이하 "운영자")는 밤사이 코스피 웹사이트에서 회원가입이나 개인정보 입력을 받지 않습니다.</p>
 <h2>광고와 쿠키</h2>
 <p>이 사이트는 Google AdSense 광고를 게재할 수 있습니다. Google을 비롯한 제3자 공급업체는 쿠키를 사용해 사용자가 이 사이트나 다른 웹사이트를 방문한 기록을 바탕으로 광고를 게재합니다. 사용자는 <a href="https://adssettings.google.com">Google 광고 설정</a>에서 맞춤 광고를 끌 수 있습니다. 자세한 내용은 <a href="https://policies.google.com/technologies/ads">Google 광고 정책</a>을 참고하십시오.</p>
+""" + WEB_ANALYTICS_NOTICE + """
 <h2>문의</h2>
 <p>디토엑시스 · help.ditoaxis@gmail.com</p>
 <p><a href="../">밤사이 코스피로 돌아가기</a></p>

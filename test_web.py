@@ -124,13 +124,117 @@ class WebTests(unittest.TestCase):
         self.fetch.assert_not_called()
         self.assertFalse(self.captures)
 
+    def assert_web_analytics(self, doc):
+        loaders = [n for n in doc.find('script') if n.attrs.get('src') == 'https://ditoaxis.com/m.js']
+        self.assertEqual(len(loaders), 1)
+        self.assertEqual(loaders[0].attrs, {'defer': None, 'src': 'https://ditoaxis.com/m.js'})
+        self.assertIn(loaders[0], doc.find('head')[0].find('script'))
+        self.assertFalse(any('cloudflareinsights.com' in n.attrs.get('src', '') for n in doc.find('script')))
+
+    def test_analytics_in_every_generated_web_head_with_or_without_ads(self):
+        self.write(legacy_record('2026-09-23'))
+        self.write(legacy_record('2026-10-12'))
+        orphan = self.site / '2026-10-13'
+        orphan.mkdir()
+        (orphan / 'index.html').write_text('<div>old orphan page</div>')
+        for client in ('', 'ca-pub-fixture'):
+            with self.subTest(client=client), patch.object(r, 'ADSENSE', client), patch.object(r, 'ADSENSE_SLOT', '12345'):
+                r.regenerate(self.hist)
+                pages = list(self.site.rglob('*.html'))
+                self.assertEqual(len(pages), 8)
+                for page in pages:
+                    source = page.read_text()
+                    doc = Document(source)
+                    self.assert_web_analytics(doc)
+                    self.assertEqual(source.count('<script defer src="https://ditoaxis.com/m.js"></script>'), 1)
+                    if client and page.parent.name != 'privacy':
+                        scripts = doc.find('head')[0].find('script')
+                        self.assertEqual(len(scripts), 2)
+                        self.assertIn('pagead2.googlesyndication.com', scripts[0].attrs['src'])
+                        self.assertEqual(scripts[1].attrs['src'], 'https://ditoaxis.com/m.js')
+        self.fetch.assert_not_called()
+        self.assertFalse(self.captures)
+
+    def test_privacy_explains_cookie_free_aggregate_analytics(self):
+        r.regenerate(self.hist)
+        doc = self.read('privacy')
+        self.assert_web_analytics(doc)
+        self.assertIn('https://www.cloudflare.com/web-analytics/', doc.links())
+        for text in ('Cloudflare Web Analytics', '페이지 주소', '유입 경로', '브라우저·기기 종류',
+                     '국가', '로딩 성능', '쿠키나 기기 식별자를 사용하지 않으며', '개인을 알아볼 수 없는 집계'):
+            self.assertIn(text, doc.root.text)
+        self.assertIn('https://adssettings.google.com', doc.links())
+        self.assertIn('https://policies.google.com/technologies/ads', doc.links())
+
+    def test_restyle_adds_analytics_to_all_html_once_and_preserves_ads_and_privacy(self):
+        source = self.restyle_fixture()
+        ad = '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-fixture" crossorigin="anonymous"></script>'
+        privacy = r.PRIVACY.replace(r.WEB_ANALYTICS, '').replace(r.WEB_ANALYTICS_NOTICE, '')
+        (self.site / 'privacy').mkdir()
+        (self.site / 'legacy').mkdir()
+        legacy = '<!doctype html><html><head><title>공유 기록</title></head><body><p>기존 공개 내용</p></body></html>'
+        for existing in ('', r.WEB_ANALYTICS,
+                         r.WEB_ANALYTICS + "<script src='https://ditoaxis.com/m.js' defer></script>"):
+            with self.subTest(existing=existing):
+                (self.site / 'index.html').write_text(source.replace('</head>', ad + existing + '</head>'))
+                (self.site / 'privacy/index.html').write_text(privacy)
+                (self.site / 'legacy/index.html').write_text(legacy)
+                protected = {p: p.read_bytes() for p in self.site.rglob('*') if p.is_file() and p.suffix != '.html'}
+                r.restyle()
+                once = {p: p.read_text() for p in self.site.rglob('*.html')}
+                for page, text in once.items():
+                    self.assert_web_analytics(Document(text))
+                home = once[self.site / 'index.html']
+                self.assertIn(ad + r.WEB_ANALYTICS, home.replace('\n', ''))
+                self.assertEqual(home.count(ad), 1)
+                updated_privacy = once[self.site / 'privacy/index.html']
+                self.assertEqual(updated_privacy.count(r.WEB_ANALYTICS_NOTICE), 1)
+                self.assertEqual(Document(updated_privacy).find('body')[0].text,
+                                 Document(privacy.replace('<h2>문의</h2>', r.WEB_ANALYTICS_NOTICE + '<h2>문의</h2>')).find('body')[0].text)
+                self.assertEqual(Document(once[self.site / 'legacy/index.html']).find('body')[0].text,
+                                 Document(legacy).find('body')[0].text)
+                r.restyle()
+                self.assertEqual({p: p.read_text() for p in once}, once)
+                self.assertEqual({p: p.read_bytes() for p in protected}, protected)
+        self.fetch.assert_not_called()
+        self.assertFalse(self.captures)
+
     def test_restyle_unknown_template_fails_before_any_html_write(self):
         source = self.restyle_fixture()
-        (self.site / 'broken.html').write_text('<header class="site-header">unknown</header><main>old</main>')
+        (self.site / 'broken.html').write_text('<html><head><title>unknown</title></head><body><header class="site-header">unknown</header><main>old</main></body></html>')
         with self.assertRaises(RuntimeError):
             r.restyle()
         self.assertEqual((self.site / 'index.html').read_text(), source)
         self.fetch.assert_not_called()
+
+    def test_restyle_warns_and_leaves_headless_html_unchanged(self):
+        self.restyle_fixture()
+        headless = self.site / 'fragment.html'
+        source = '<header class="site-header">기존 조각</header><main>수치는 +1.23%</main>\r\n'.encode('utf-8')
+        headless.write_bytes(source)
+        for _ in range(2):
+            r.restyle()
+            self.assertEqual(headless.read_bytes(), source)
+            self.assert_web_analytics(self.read())
+        self.assertEqual(self.output.getvalue().count('::warning::Skipped headless HTML fragment.html; left unchanged'), 2)
+        self.fetch.assert_not_called()
+        self.assertFalse(self.captures)
+
+    def test_restyle_headless_homepage_or_privacy_fails_before_any_html_write(self):
+        home = self.restyle_fixture()
+        privacy = self.site / 'privacy' / 'index.html'
+        privacy.parent.mkdir()
+        for required in (self.site / 'index.html', privacy):
+            with self.subTest(page=required.relative_to(self.site)):
+                (self.site / 'index.html').write_text(home)
+                privacy.write_text(r.PRIVACY)
+                required.write_text('<body>missing head</body>')
+                before = {p: p.read_bytes() for p in self.site.rglob('*') if p.is_file()}
+                with self.assertRaisesRegex(RuntimeError, 'Missing published head'):
+                    r.restyle()
+                self.assertEqual({p: p.read_bytes() for p in before}, before)
+        self.fetch.assert_not_called()
+        self.assertFalse(self.captures)
 
     def test_restyle_missing_publication_never_bootstraps(self):
         with self.assertRaises(RuntimeError):
@@ -712,6 +816,8 @@ class WebTests(unittest.TestCase):
         r.backfill(1)
         self.assertTrue(self.captures)
         self.assertNotIn('googlesyndication', self.captures[-1])
+        self.assertNotIn('https://ditoaxis.com/m.js', self.captures[-1])
+        self.assertNotIn('cloudflareinsights.com', self.captures[-1])
 
     def test_backfill_keeps_no_session_flag(self):
         day = '2026-10-16'
