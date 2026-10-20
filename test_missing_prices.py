@@ -104,7 +104,7 @@ def check():
         assert recovered["source_dates"]["SPY"] == good["source_dates"]["SPY"]
         assert recovered["head"]["cond"] == "이전에 확인한 뉴욕 자료예요"
         assert recovered["sentence"].startswith("이전에 확인한 뉴욕 자료예요.")
-        assert "이전에 확인한 뉴욕 자료예요" in (Path(tmp) / "index.html").read_text()
+        assert "이전에 확인한 미국 증시 자료예요" in (Path(tmp) / "index.html").read_text()
         for key in ("us", "open", "close"):
             assert recovered[key] == good[key], key
         r.backfill(1)

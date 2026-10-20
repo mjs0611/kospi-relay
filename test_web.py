@@ -377,8 +377,8 @@ class WebTests(unittest.TestCase):
             for waiting in ('대기', '기다리', '채워지면'):
                 self.assertNotIn(waiting, doc.find('body')[0].text)
             if route != 'archive/2026-10':
-                self.assertIn('비교할 뉴욕 자료가 없어요', doc.section('ny-area').text)
-                self.assertIn('비교할 뉴욕 자료가 없어요', doc.section('frequency-area').text)
+                self.assertIn('비교할 미국 증시 자료가 없어요', doc.section('ny-area').text)
+                self.assertIn('비교할 미국 증시 자료가 없어요', doc.section('frequency-area').text)
         # An actual session with missing prices serializes identical null US values,
         # but retains a non-null frequency state instead of claiming no session.
         self.raw.update(original)
@@ -390,7 +390,7 @@ class WebTests(unittest.TestCase):
         self.assertEqual(pending['freq']['bin'], '자료 대기')
         for route in ('', day):
             doc = self.read(route)
-            self.assertIn('뉴욕 자료를 기다리고 있어요', doc.section('ny-area').text)
+            self.assertIn('미국 증시 자료를 기다리고 있어요', doc.section('ny-area').text)
             self.assertIn('자료가 채워지면', doc.section('frequency-area').text)
             self.assertIn('자료 대기', doc.section('comparison').text)
         self.assertIn('자료 대기', self.read('archive/2026-10').section('archive-table').text)
@@ -475,7 +475,7 @@ class WebTests(unittest.TestCase):
     def test_frequency_counts_are_distinct_from_signed_results(self):
         doc = Document(r.web_frequency_graph({'n': 40, 'up': 18, 'flat': 12, 'down': 10}, True))
         self.assertEqual([n.text for n in doc.find(cls='frequency-value')],
-                         ['40번 중 18번(45%)', '40번 중 12번(30%)', '40번 중 10번(25%)'])
+                         ['40번 중 18번, 45%', '40번 중 12번, 30%', '40번 중 10번, 25%'])
         self.assertFalse(doc.find('strong'))
         result = Document(r.web_result(legacy_record('2026-10-12'), True))
         self.assertEqual([n.text for n in result.find('strong')], ['+1.23%', '-0.45%'])
@@ -529,7 +529,8 @@ class WebTests(unittest.TestCase):
                              [] if selected in pending else [selected])
             self.assertTrue(all('current-row' in row.attrs.get('class', '').split() for row in current))
             year, month, day = map(int, selected.split('-'))
-            self.assertEqual(doc.find('h1')[0].text, f'{year}년 {month}월 {day}일')
+            self.assertEqual(doc.find('h1')[0].text, '어젯밤 미국 증시와 코스피')
+            self.assertTrue(doc.find('time')[0].text.startswith(f'{year}년 {month}월 {day}일('))
             self.assertEqual(doc.find('time')[0].attrs['datetime'], selected)
             self.assertTrue(any('/archive/' + selected[:7] + '/' in a.attrs.get('href', '')
                                 for a in doc.section('comparison').find('a')))
@@ -613,7 +614,8 @@ class WebTests(unittest.TestCase):
             doc = self.read(d)
             self.canonical(doc, d)
             # Even the latest publication can be a past date (weekends, late updates).
-            self.assertNotIn('오늘', doc.find('body')[0].text)
+            # The shared ditoaxis menu (dx-bar) describes other services and is not dated content.
+            self.assertNotIn('오늘', doc.find('main')[0].text)
             for meta in doc.find('meta'):
                 self.assertNotIn('오늘', meta.attrs.get('content', ''))
             text = (self.site / d / 'index.html').read_text()
@@ -682,7 +684,7 @@ class WebTests(unittest.TestCase):
                 self.assertNotIn(waiting, body, day)
             self.assertIn('기록이 없어요', body)
         past = self.read('2026-09-08')
-        self.assertIn('비교할 뉴욕 자료가 없어요', past.section('ny-area').text)
+        self.assertIn('비교할 미국 증시 자료가 없어요', past.section('ny-area').text)
         self.assertIn('비교할 과거 기록이 없어요', past.section('frequency-area').text)
         past_cells = past.section('comparison').find('tbody')[0].find('tr')[0].find('td')
         self.assertEqual([cell.text for cell in past_cells[:3]], ['기록이 없어요'] * 3)
@@ -699,7 +701,7 @@ class WebTests(unittest.TestCase):
         self.assertEqual(latest_archive_cells(), ['자료 대기'] * 3 + ['시가 대기', '종가 대기'])
         for route in ('', '2026-10-01'):
             doc = self.read(route)
-            self.assertIn('뉴욕 자료를 기다리고 있어요', doc.section('ny-area').text)
+            self.assertIn('미국 증시 자료를 기다리고 있어요', doc.section('ny-area').text)
             self.assertIn('자료가 채워지면', doc.section('frequency-area').text)
             self.assertIn('시가 대기', doc.section('result-area').text)
             self.assertIn('종가 대기', doc.section('result-area').text)
@@ -767,7 +769,7 @@ class WebTests(unittest.TestCase):
         self.write(legacy_record('2026-09-30', status='pending'))
         r.regenerate(self.hist)
         missing_ny = self.read('2026-09-28').section('ny-area').text
-        self.assertIn('비교할 뉴욕 자료가 없어요', missing_ny)
+        self.assertIn('비교할 미국 증시 자료가 없어요', missing_ny)
         self.assertNotIn('대기', missing_ny)
         self.assertNotIn('0.00%', missing_ny)
         self.assertIn('이전에 확인한', self.read('2026-09-29').root.text)
@@ -871,7 +873,7 @@ class WebTests(unittest.TestCase):
             self.raw[key].loc[r.pd.Timestamp('2026-10-15'), 'Close'] = r.np.nan
         r.backfill(1)
         self.assertIsNone(json.loads((self.site / 'days' / (day + '.json')).read_text())['freq'])
-        self.assertIn('비교할 뉴욕 자료가 없어요', self.read(day).root.text)
+        self.assertIn('비교할 미국 증시 자료가 없어요', self.read(day).root.text)
 
     def test_backfill_close_present_without_open_keeps_done_status(self):
         day = r.pd.Timestamp('2026-10-16')

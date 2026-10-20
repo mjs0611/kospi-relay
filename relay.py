@@ -333,7 +333,7 @@ document.querySelector('.share').addEventListener('click', async function () {{
 
 # ---------- web edition (published JSON is read-only here) ----------
 WEB_CSS = """
-:root{font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;font-size:93.75%;font-variant-numeric:tabular-nums;color:#10172A;--ink:#10172A;--up:#D9433B;--down:#2C5FD6;--flat:#B5B9C0;--rule:#DFE2E7}
+:root{font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;font-size:100%;font-variant-numeric:tabular-nums;color:#10172A;--ink:#10172A;--up:#D9433B;--down:#2C5FD6;--flat:#B5B9C0;--rule:#DFE2E7}
 *{box-sizing:border-box}body{margin:0;background:#FFF;word-break:keep-all;font-size:1rem;line-height:1.5}
 a{color:inherit;text-underline-offset:4px}button{font:inherit;color:inherit}a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 .wrap{max-width:1120px;margin:auto}.site-header{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:80px;border-bottom:1px solid var(--rule)}
@@ -341,23 +341,251 @@ a{color:inherit;text-underline-offset:4px}button{font:inherit;color:inherit}a:fo
 .page-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:28px 0}h1{font-size:1.86667rem;letter-spacing:-.04em;margin:0}h2{font-size:1.26667rem;letter-spacing:-.025em;margin:0 0 20px}h3{font-size:1.06667rem;margin:28px 0 8px}p{margin:12px 0}
 .day-nav{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:0.933333rem;margin:0 0 24px}.day-nav a{white-space:nowrap}
 .answer-band{display:grid;grid-template-columns:320px minmax(0,1fr);gap:40px;padding:8px 0 36px}.kospi-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px}
-.ny-area,.frequency-area,.result-area{min-width:0}.ny-area{padding-right:28px;border-right:1px solid var(--rule)}.graphic-row{margin:0 0 16px}.row-label{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:0.933333rem}.row-label strong{font-size:1.26667rem;font-weight:650}.ticker{font-size:0.8rem;margin-left:6px}.source-state{display:block;font-size:0.8rem;margin-top:3px}.source-state:empty{display:none}
+.ny-area,.frequency-area,.result-area{min-width:0}.ny-area{padding-right:28px;border-right:1px solid var(--rule)}.graphic-row{margin:0 0 16px}.row-label{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:0.933333rem}.row-label strong{font-size:1.26667rem;font-weight:650}.ticker{font-size:.875rem;margin-left:6px}.source-state{display:block;font-size:.875rem;margin-top:3px}.source-state:empty{display:none}
 .ny-track{height:8px;position:relative;background:#F3F4F6;margin-top:8px}.ny-track:before{content:"";position:absolute;left:50%;top:-3px;height:14px;width:1px;background:var(--flat)}.ny-track i{position:absolute;height:8px;display:block;background:var(--flat)}
-.frequency-scale{display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:10px}.frequency-track{height:12px;background:#F3F4F6;margin-top:7px}.frequency-track i{display:block;height:12px;background:var(--flat)}.frequency-value{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px;font-size:0.866667rem;font-weight:400}.frequency-value span{white-space:nowrap}.sample-count{font-size:0.866667rem;margin:16px 0 0}.answer{font-size:0.933333rem;line-height:1.6;margin:18px 0 0}.empty{display:flex;align-items:center;min-height:172px;font-size:1rem}
-.result-basis{font-size:0.866667rem;margin:0 0 12px}.result-axis{display:flex;justify-content:space-between;font-size:0.8rem;margin:0 0 16px}.result-axis span:nth-child(2){text-align:center}.result-track{position:relative;height:20px;margin:8px 8px 18px;border-bottom:1px solid var(--rule)}.result-track:before{content:"";position:absolute;width:1px;background:var(--flat);left:50%;top:0;height:25px}.result-mark{position:absolute;bottom:-6px;display:block;width:11px;height:11px;border-radius:50%;background:var(--flat);transform:translateX(-50%)}.result-mark.close{border-radius:0}.pending-value{font-size:0.933333rem!important;font-weight:500!important}
-.comparison{border-top:1px solid var(--rule);padding:28px 0 0}.section-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px}.section-heading a{font-size:0.933333rem}.comparison table,.archive-table{width:100%;border-collapse:collapse;font-size:0.933333rem;table-layout:fixed}.comparison th,.comparison td,.archive-table th,.archive-table td{padding:14px 8px;border-bottom:1px solid var(--rule);text-align:right;font-weight:500}.comparison th:first-child,.comparison td:first-child,.archive-table th:first-child,.archive-table td:first-child{text-align:left;width:19%}.comparison thead th,.archive-table thead th{font-size:0.866667rem}.comparison td a,.archive-table td a{font-weight:650}.cell-mark{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--flat);margin-right:5px;vertical-align:middle}.cell-wait{font-size:0.8rem}.column-unit{display:block;font-size:0.8rem;font-weight:400}.archive-table .no-record{text-align:center}.comparison .current-row{background:#F3F4F6}.comparison .current-row th{border-left:2px solid var(--ink)}.ad-slot{margin-top:32px;min-height:310px;border-top:1px solid var(--rule);padding-top:12px;font-size:0.8rem}.ad-slot ins{display:block;height:280px}
-.site-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;border-top:1px solid var(--rule);padding:24px 0 32px;margin-top:48px;font-size:0.8rem}.site-footer nav{display:flex;gap:20px}.share{background:#FFF;border:1px solid var(--rule);border-radius:6px;padding:7px 14px;font-size:0.866667rem;cursor:pointer}.share:not([hidden]){display:inline-block}.prose{max-width:720px}.prose p,.prose li{line-height:1.8}.method-table{width:100%;border-collapse:collapse}.method-table td,.method-table th{text-align:left;padding:10px;border-bottom:1px solid var(--rule)}
+.frequency-scale{display:flex;justify-content:space-between;font-size:.875rem;margin-bottom:10px}.frequency-track{height:12px;background:#F3F4F6;margin-top:7px}.frequency-track i{display:block;height:12px;background:var(--flat)}.frequency-value{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px;font-size:0.875rem;font-weight:400}.frequency-value span{white-space:nowrap}.sample-count{font-size:0.875rem;margin:16px 0 0}.answer{font-size:0.933333rem;line-height:1.6;margin:18px 0 0}.empty{display:flex;align-items:center;min-height:172px;font-size:1rem}
+.result-basis{font-size:0.875rem;margin:0 0 12px}.result-axis{display:flex;justify-content:space-between;font-size:.875rem;margin:0 0 16px}.result-axis span:nth-child(2){text-align:center}.result-track{position:relative;height:20px;margin:8px 8px 18px;border-bottom:1px solid var(--rule)}.result-track:before{content:"";position:absolute;width:1px;background:var(--flat);left:50%;top:0;height:25px}.result-mark{position:absolute;bottom:-6px;display:block;width:11px;height:11px;border-radius:50%;background:var(--flat);transform:translateX(-50%)}.result-mark.close{border-radius:0}.pending-value{font-size:0.933333rem!important;font-weight:500!important}
+.comparison{border-top:1px solid var(--rule);padding:28px 0 0}.section-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px}.section-heading a{font-size:0.933333rem}.comparison table,.archive-table{width:100%;border-collapse:collapse;font-size:0.933333rem;table-layout:fixed}.comparison th,.comparison td,.archive-table th,.archive-table td{padding:14px 8px;border-bottom:1px solid var(--rule);text-align:right;font-weight:500}.comparison th:first-child,.comparison td:first-child,.archive-table th:first-child,.archive-table td:first-child{text-align:left;width:19%}.comparison thead th,.archive-table thead th{font-size:0.875rem}.comparison td a,.archive-table td a{font-weight:650}.cell-mark{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--flat);margin-right:5px;vertical-align:middle}.cell-wait{font-size:.875rem}.column-unit{display:block;font-size:.875rem;font-weight:400}.archive-table .no-record{text-align:center}.comparison .current-row{background:#F3F4F6}.comparison .current-row th{border-left:2px solid var(--ink)}.ad-slot{margin-top:32px;min-height:310px;border-top:1px solid var(--rule);padding-top:12px;font-size:.875rem}.ad-slot ins{display:block;height:280px}
+.site-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;border-top:1px solid var(--rule);padding:24px 0 32px;margin-top:48px;font-size:.875rem}.site-footer nav{display:flex;gap:20px}.share{background:#FFF;border:1px solid var(--rule);border-radius:6px;padding:7px 14px;font-size:0.875rem;cursor:pointer}.share:not([hidden]){display:inline-block}.prose{max-width:720px}.prose p,.prose li{line-height:1.8}.method-table{width:100%;border-collapse:collapse}.method-table td,.method-table th{text-align:left;padding:10px;border-bottom:1px solid var(--rule)}
 @media(max-width:1199px){.wrap{margin:0 32px}.answer-band{grid-template-columns:280px minmax(0,1fr);gap:28px}.kospi-side{gap:28px}}
 @media(max-width:900px){.answer-band{grid-template-columns:1fr;gap:28px}.ny-area{padding:0 0 16px;border-right:0;border-bottom:1px solid var(--rule)}.kospi-side{gap:32px}.ny-area .graphic-row{max-width:480px}}
-@media(max-width:600px){.wrap{margin:0 20px}.site-header{min-height:68px;gap:12px}.brand{font-size:1.13333rem}.site-header nav{gap:16px;font-size:0.866667rem}.page-heading{padding:24px 0}h1{font-size:1.66667rem}h2{font-size:1.2rem;margin-bottom:20px}.kospi-side{grid-template-columns:1fr;gap:28px}.frequency-area{padding-bottom:24px;border-bottom:1px solid var(--rule)}.answer-band{padding-bottom:28px}.ny-area{padding-bottom:24px}.graphic-row{margin-bottom:18px}.comparison{padding-top:24px}.comparison th,.comparison td,.archive-table th,.archive-table td{padding:12px 1px;font-size:0.8rem}.comparison thead th,.archive-table thead th{font-size:0.8rem}.comparison th:first-child,.comparison td:first-child,.archive-table th:first-child,.archive-table td:first-child{width:17%}.comparison .cell-mark,.archive-table .cell-mark{display:none}.comparison .cell-wait{font-size:0.8rem}.section-heading{align-items:baseline}.section-heading h2{font-size:1.13333rem}.section-heading a{font-size:0.8rem}.site-footer{display:block;margin-top:36px}.site-footer nav{margin-top:12px}.day-nav{font-size:0.866667rem}.empty{min-height:120px}}
-.service-family{border-bottom:1px solid var(--rule)}.service-family a{display:inline-flex;align-items:center;gap:10px;max-width:100%;min-height:44px;color:#535F71;font-size:.8rem;text-decoration:none}.axis-mark{font-size:1.53333rem;font-weight:500;line-height:1;color:var(--ink)}
+@media(max-width:600px){.wrap{margin:0 20px}.site-header{min-height:68px;gap:12px}.brand{font-size:1.13333rem}.site-header nav{gap:16px;font-size:0.875rem}.page-heading{padding:24px 0}h1{font-size:1.66667rem}h2{font-size:1.2rem;margin-bottom:20px}.kospi-side{grid-template-columns:1fr;gap:28px}.frequency-area{padding-bottom:24px;border-bottom:1px solid var(--rule)}.answer-band{padding-bottom:28px}.ny-area{padding-bottom:24px}.graphic-row{margin-bottom:18px}.comparison{padding-top:24px}.comparison th,.comparison td,.archive-table th,.archive-table td{padding:12px 1px;font-size:.875rem}.comparison thead th,.archive-table thead th{font-size:.875rem}.comparison th:first-child,.comparison td:first-child,.archive-table th:first-child,.archive-table td:first-child{width:17%}.comparison .cell-mark,.archive-table .cell-mark{display:none}.comparison .cell-wait{font-size:.875rem}.section-heading{align-items:baseline}.section-heading h2{font-size:1.13333rem}.section-heading a{font-size:.875rem}.site-footer{display:block;margin-top:36px}.site-footer nav{margin-top:12px}.day-nav{font-size:0.875rem}.empty{min-height:120px}}
+.service-family{border-bottom:1px solid var(--rule)}.service-family a{display:inline-flex;align-items:center;gap:10px;max-width:100%;min-height:44px;color:#535F71;font-size:.875rem;text-decoration:none}.axis-mark{font-size:1.53333rem;font-weight:500;line-height:1;color:var(--ink)}
 body{overflow-wrap:anywhere}.row-label{flex-wrap:wrap;gap:4px 12px}
 .site-header{flex-wrap:wrap;padding-block:12px;gap:8px 24px}.site-header nav{flex-wrap:wrap;gap:4px 20px}.site-header nav a,.day-nav a,.section-heading>a,.site-footer nav a{display:inline-flex;align-items:center;min-height:44px}.site-header nav a[aria-current]{text-decoration-thickness:2px}.day-nav{gap:4px 20px}.page-heading,.section-heading{flex-wrap:wrap}.share{min-height:44px;min-width:56px}
-.table-hint{font-size:.8rem;color:#535F71;margin:4px 0 12px}.table-scroll{overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-color:#A0A8B4 #F3F4F6;padding-bottom:6px}.table-scroll:focus-visible{outline:2px solid var(--ink);outline-offset:4px}.table-scroll table{min-width:30rem}.table-scroll tbody th{position:sticky;left:0;z-index:1;background:#FFF;box-shadow:1px 0 var(--rule)}.table-scroll .current-row th{background:#F3F4F6}.table-scroll th a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
+.table-hint{font-size:.875rem;color:#535F71;margin:4px 0 12px}.table-scroll{overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-color:#A0A8B4 #F3F4F6;padding-bottom:6px}.table-scroll:focus-visible{outline:2px solid var(--ink);outline-offset:4px}.table-scroll table{min-width:30rem}.table-scroll tbody th{position:sticky;left:0;z-index:1;background:#FFF;box-shadow:1px 0 var(--rule)}.table-scroll .current-row th{background:#F3F4F6}.table-scroll th a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
 .skip{position:fixed;top:-100px;left:16px;background:white;color:var(--ink);padding:12px;z-index:10}.skip:focus{top:12px}main:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 @media(min-width:901px){.table-hint{display:none}}@media(hover:hover) and (pointer:fine){.service-family a:hover,.site-header nav a:hover,.day-nav a:hover{color:#2C5FD6}}
 
+
+/* ==========================================================================
+   dito-common.css — 디토엑시스 8개 사이트 공용 층 (v1, 2026-10-20)
+   범위: 공용 헤더(.dx-bar) · 공용 푸터(.dx-footer) · 글꼴 · 뒤로가기 링크(.dx-back)
+   원칙: 각 사이트 테마는 건드리지 않아요. 모든 선택자는 .dx- 접두사, 토큰은 --dx- 접두사.
+   JS 없이 동작해요(<details>/<summary> 사용). 라이트 모드 전용.
+   ========================================================================== */
+
+/* 1) 글꼴 — Pretendard (CDN 기본, font-display: swap 포함)
+   <head>에 아래 두 줄을 이 CSS보다 먼저 넣어 주세요(@import보다 빠름).
+   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+   자체 호스팅을 쓸 때는 spec-common.md §3 참고. */
+
+:root {
+  /* 글꼴 */
+  --dx-font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
+             "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Segoe UI", Roboto, sans-serif;
+
+  /* 중립 색 — 흰 바탕(#FFFFFF)과 종이 바탕(#F2EBDC, donbti) 모두에서 AA 통과 */
+  --dx-ink:      #191F28;   /* 본문·링크 글자  흰 16.6 / 종이 14.0 */
+  --dx-ink-2:    #333D4B;   /* 강조 보조       흰 11.0 / 종이 9.3 */
+  --dx-muted:    #4E5968;   /* 보조 글자       흰 7.1  / 종이 6.0 */
+  --dx-line:     rgba(25, 31, 40, .14);  /* 구분선(바탕색에 섞여서 둘 다 자연스러움) */
+  --dx-hover:    rgba(25, 31, 40, .06);  /* hover/active 바탕 */
+  --dx-surface:  #FFFFFF;   /* 펼친 메뉴 패널 */
+  --dx-blue:     #1B64DA;   /* 회사 공용 파랑(마크 점·포커스)  흰 5.4 / 종이 4.6 */
+  --dx-focus:    var(--dx-blue);
+  --dx-shadow:   0 2px 6px rgba(25,31,40,.08), 0 12px 32px -8px rgba(25,31,40,.22);
+
+  /* 간격 (4px 단위) */
+  --dx-space-1: 4px;  --dx-space-2: 8px;  --dx-space-3: 12px;
+  --dx-space-4: 16px; --dx-space-5: 24px; --dx-space-6: 32px; --dx-space-7: 48px;
+
+  /* 크기 */
+  --dx-tap: 44px;           /* 최소 터치 영역 */
+  --dx-bar-h: 48px;         /* 공용 헤더 높이 */
+  --dx-mark: 18px;          /* 마크 아이콘 */
+  --dx-max: 1120px;         /* 공용 헤더·푸터 안쪽 최대 폭. 사이트 컨테이너 폭에 맞춰 덮어써요 */
+  --dx-gutter: 20px;        /* 좌우 여백(모바일). PC는 아래 미디어쿼리에서 32px */
+
+  /* 모서리 */
+  --dx-radius-s: 8px; --dx-radius-m: 12px; --dx-radius-l: 16px; --dx-radius-pill: 999px;
+
+  /* 글자 크기 (최소 14px — 50~60대 사용자 기준) */
+  --dx-text-xs: 14px;   /* 캡션·법적 고지 하한 */
+  --dx-text-sm: 15px;   /* 공용 헤더 링크, 푸터 */
+  --dx-text-md: 16px;   /* 본문 기본 */
+  --dx-text-lg: 18px;
+  --dx-text-xl: 20px;
+  --dx-text-2xl: 24px;
+  --dx-text-3xl: 28px;
+  --dx-text-4xl: 34px;  /* PC 큰 제목 */
+  --dx-leading: 1.6;
+  --dx-leading-tight: 1.3;
+}
+
+/* 글꼴 적용: 명시도 0이라 사이트가 따로 지정한 제목 글꼴(예: donbti 명조)은 그대로 이겨요 */
+:where(html) { font-family: var(--dx-font); }
+:where(body, button, input, select, textarea) { font-family: inherit; }
+
+/* 공통 보조 */
+.dx-sr { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
+         overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.dx-bar :focus-visible, .dx-footer :focus-visible, .dx-back:focus-visible {
+  outline: 3px solid var(--dx-focus); outline-offset: 2px; border-radius: var(--dx-radius-s);
+}
+.dx-bar *, .dx-footer * { box-sizing: border-box; }
+
+/* 2) 공용 헤더 ============================================================ */
+.dx-bar {
+  position: relative; z-index: 1000;
+  font-family: var(--dx-font); color: var(--dx-ink);
+  background: transparent;                 /* 사이트 바탕(흰/종이)을 그대로 보여요 */
+  border-bottom: 1px solid var(--dx-line);
+  -webkit-text-size-adjust: 100%;
+}
+.dx-bar__in {
+  max-width: var(--dx-max); margin: 0 auto; padding: 0 var(--dx-gutter);
+  min-height: var(--dx-bar-h);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--dx-space-3);
+}
+.dx-bar__home {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: var(--dx-tap); padding: 0 var(--dx-space-1); margin-left: calc(-1 * var(--dx-space-1));
+  color: var(--dx-ink); text-decoration: none;
+  font-size: var(--dx-text-md); font-weight: 800; letter-spacing: -.04em; line-height: 1;
+}
+.dx-bar__home svg { width: var(--dx-mark); height: var(--dx-mark); flex: none; }
+.dx-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--dx-blue); align-self: flex-start; margin: 13px 0 0 -3px; }
+
+/* 다른 서비스: <details> 디스클로저 (JS 없이 열고 닫혀요) */
+.dx-more { position: static; }
+.dx-more > summary {
+  list-style: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: var(--dx-tap); padding: 0 var(--dx-space-3); margin-right: calc(-1 * var(--dx-space-3));
+  border-radius: var(--dx-radius-pill);
+  font-size: var(--dx-text-sm); font-weight: 600; color: var(--dx-ink-2);
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.dx-more > summary::-webkit-details-marker { display: none; }
+.dx-more > summary::marker { content: ""; }
+.dx-more > summary:hover, .dx-more[open] > summary { background: var(--dx-hover); color: var(--dx-ink); }
+.dx-more > summary svg { width: 16px; height: 16px; flex: none; transition: transform .15s ease; }
+.dx-more[open] > summary svg { transform: rotate(180deg); }
+
+.dx-more__panel {
+  position: absolute; left: var(--dx-space-2); right: var(--dx-space-2); top: calc(100% + 6px);
+  max-height: min(72vh, 640px); overflow: auto; overscroll-behavior: contain;
+  background: var(--dx-surface); color: var(--dx-ink);
+  border: 1px solid var(--dx-line); border-radius: var(--dx-radius-l); box-shadow: var(--dx-shadow);
+  padding: var(--dx-space-2);
+}
+.dx-more__title { margin: var(--dx-space-2) var(--dx-space-3) var(--dx-space-1); font-size: var(--dx-text-xs); font-weight: 600; color: var(--dx-muted); }
+.dx-more__list { list-style: none; margin: 0; padding: 0; }
+.dx-more__list a {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: var(--dx-space-3);
+  min-height: 56px; padding: 10px var(--dx-space-3); border-radius: var(--dx-radius-m);
+  color: var(--dx-ink); text-decoration: none;
+}
+.dx-more__list a:hover { background: var(--dx-hover); }
+.dx-more__name { font-size: var(--dx-text-md); font-weight: 700; line-height: var(--dx-leading-tight); }
+.dx-more__desc { grid-column: 1; font-size: var(--dx-text-xs); color: var(--dx-muted); line-height: 1.45; margin-top: 2px; }
+.dx-more__list a[aria-current="page"] { background: var(--dx-hover); }
+.dx-more__list a[aria-current="page"]::after {
+  content: "지금 보는 곳"; grid-column: 2; grid-row: 1 / span 2;
+  font-size: var(--dx-text-xs); font-weight: 600; color: var(--dx-muted);
+  padding: 2px 8px; white-space: nowrap; border: 1px solid var(--dx-line); border-radius: var(--dx-radius-pill);
+}
+.dx-more__all {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 48px; margin-top: var(--dx-space-2); border-top: 1px solid var(--dx-line);
+  font-size: var(--dx-text-sm); font-weight: 600; color: var(--dx-ink); text-decoration: none;
+}
+.dx-more__all:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* 3) 공용 푸터 ============================================================ */
+.dx-footer {
+  font-family: var(--dx-font); color: var(--dx-muted);
+  background: transparent; border-top: 1px solid var(--dx-line);
+  font-size: var(--dx-text-sm); line-height: var(--dx-leading);
+  -webkit-text-size-adjust: 100%;
+}
+.dx-footer__in { max-width: var(--dx-max); margin: 0 auto; padding: var(--dx-space-5) var(--dx-gutter) var(--dx-space-6); }
+.dx-footer__brand { display: inline-flex; align-items: center; gap: 6px; min-height: var(--dx-tap);
+  color: var(--dx-ink); text-decoration: none; font-weight: 800; letter-spacing: -.04em; font-size: var(--dx-text-md); }
+.dx-footer__brand svg { width: 16px; height: 16px; }
+.dx-footer__op { margin: var(--dx-space-1) 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; align-items: center; }
+.dx-footer__op li { display: inline-flex; align-items: center; }
+.dx-footer__op li:not(:last-child)::after { content: "·"; margin: 0 8px; color: var(--dx-muted); } /* 줄바꿈 때 점이 줄 끝에 남아 새 줄이 점으로 시작하지 않아요 */
+.dx-footer__op a, .dx-footer__links a {
+  display: inline-flex; align-items: center; min-height: var(--dx-tap);
+  color: var(--dx-ink-2); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px;
+  overflow-wrap: anywhere;
+}
+.dx-footer__links { list-style: none; margin: var(--dx-space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; column-gap: var(--dx-space-5); }
+.dx-footer__links a { font-weight: 600; }
+/* 사이트 컨테이너(좌우 여백 있음) 안에 넣을 때: <div class="dx-footer dx-footer--flush"> */
+.dx-footer--flush .dx-footer__in { padding-left: 0; padding-right: 0; }
+.dx-footer__copy { margin: var(--dx-space-2) 0 0; font-size: var(--dx-text-xs); }
+
+/* 4) 뒤로가기 링크(사이트 안 하위 화면용) ================================== */
+.dx-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: var(--dx-tap); padding: 0 var(--dx-space-2) 0 0;
+  font-family: var(--dx-font); font-size: var(--dx-text-md); font-weight: 600;
+  color: inherit; text-decoration: none;
+}
+.dx-back svg { width: 20px; height: 20px; }
+.dx-back:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* 5) PC (≥ 768px) ======================================================== */
+@media (min-width: 768px) {
+  :root { --dx-gutter: 32px; }
+  .dx-more { position: relative; }
+  .dx-more__panel { left: auto; right: calc(-1 * var(--dx-space-3)); width: 400px; }
+  .dx-footer__in { display: grid; grid-template-columns: auto 1fr; column-gap: var(--dx-space-6); align-items: start; }
+  .dx-footer__brand { grid-row: 1 / span 3; }
+  .dx-footer__op { margin-top: 0; }
+  .dx-footer__op, .dx-footer__links, .dx-footer__copy { grid-column: 2; }
+}
+
+/* 6) 접근성 환경 대응 */
+@media (prefers-reduced-motion: reduce) { .dx-more > summary svg { transition: none; } }
+@media (forced-colors: active) {
+  .dx-more__panel { border: 1px solid CanvasText; }
+  .dx-dot { background: CanvasText; }
+}
+@media print { .dx-bar { display: none; } }
+
+/* kospi v1020 (spec-sites.md ②) */
+:root{--dx-max:1120px}
+.date-line{margin:6px 0 0;font-size:1rem;color:#4E5968}
+.ticker{color:#4E5968}
+.frequency-value .freq-pct{font-size:1.25rem;font-weight:750}
+.forecast-note{margin:16px 0 0;padding:14px 16px;border-radius:12px;background:#FFF6E5;border:1px solid #F2D9A6;color:#4A3500;font-size:1rem;line-height:1.55}
+.forecast-note .note-title{display:block;font-size:1.0625rem;color:#2E2100;margin-bottom:2px}
+.forecast-note p{margin:0}
+.site-footer{flex-direction:column;align-items:stretch;padding-bottom:0}
+.site-footer .notes{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;font-size:.9375rem;color:#4E5968}
+.site-footer .dx-footer{margin-top:8px}
+.dx-bar__in{max-width:calc(var(--dx-max) + 64px);padding:0 32px}@media(max-width:600px){.dx-bar__in{padding:0 20px}}
 """
+
+
+DX_BAR = '<nav class="dx-bar" aria-label="디토엑시스"><div class="dx-bar__in"><a class="dx-bar__home" href="https://ditoaxis.com/" aria-label="ditoaxis 디토엑시스 홈"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2v20M2 12h20M5 5l14 14"/></svg><span>ditoaxis</span><span class="dx-dot" aria-hidden="true"></span></a><details class="dx-more"><summary>디토엑시스 다른 서비스<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></summary><div class="dx-more__panel"><p class="dx-more__title" id="dx-more-title">디토엑시스가 만든 서비스</p><ul class="dx-more__list" aria-labelledby="dx-more-title"><li><a href="https://dito.ditoaxis.com/"><span class="dx-more__name">Dito</span><span class="dx-more__desc">살 물건 비교, 할인, 장바구니 시세를 한곳에서 봐요</span></a></li><li><a href="https://exit.ditoaxis.com/"><span class="dx-more__name">퇴사 정산서</span><span class="dx-more__desc">퇴직금과 남은 연차수당을 미리 계산해요</span></a></li><li><a href="https://fx.ditoaxis.com/"><span class="dx-more__name">환율 기록</span><span class="dx-more__desc">오늘 환율을 보고 원화로 바로 계산해요</span></a></li><li><a href="https://kospi.ditoaxis.com/" aria-current="page"><span class="dx-more__name">밤사이 코스피</span><span class="dx-more__desc">어젯밤 미국 증시와 오늘 코스피를 나란히 봐요</span></a></li><li><a href="https://donbti.ditoaxis.com/"><span class="dx-more__name">지갑사주</span><span class="dx-more__desc">12문항으로 내 소비 유형을 알아봐요</span></a></li><li><a href="https://menu.ditoaxis.com/"><span class="dx-more__name">랜덤식탁</span><span class="dx-more__desc">오늘 먹을 메뉴를 골라 드려요</span></a></li><li><a href="https://giun.ditoaxis.com/"><span class="dx-more__name">오행 기운</span><span class="dx-more__desc">다섯 가지 기운을 만지며 잠깐 쉬어 가요</span></a></li></ul><a class="dx-more__all" href="https://ditoaxis.com/#products">디토엑시스 홈에서 전체 보기</a></div></details></div></nav>'
+DX_FOOTER = '<div class="dx-footer dx-footer--flush"><div class="dx-footer__in"><a class="dx-footer__brand" href="https://ditoaxis.com/" aria-label="ditoaxis 디토엑시스 홈"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2v20M2 12h20M5 5l14 14"/></svg><span>ditoaxis</span></a><ul class="dx-footer__op" aria-label="운영 정보"><li>디토엑시스</li><li>대표 모준승</li><li>사업자 221-22-95805</li><li><a href="mailto:help.ditoaxis@gmail.com">문의 help.ditoaxis@gmail.com</a></li></ul><ul class="dx-footer__links"><li><a href="/privacy/">개인정보처리방침</a></li><li><a href="https://www.ftc.go.kr/www/selectBizCommList.do?key=254">사업자정보 확인</a></li><li><a href="https://ditoaxis.com/#products">디토엑시스 다른 서비스</a></li></ul><p class="dx-footer__copy">© 2026 디토엑시스</p></div></div>'
+DX_CLOSE_JS = "<script>document.addEventListener('click',e=>{document.querySelectorAll('.dx-more[open]').forEach(d=>{if(!d.contains(e.target))d.open=false})});document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const d=document.querySelector('.dx-more[open]');if(d){d.open=false;d.querySelector('summary').focus()}});</script>"
+WEB_LABEL = {"SOXX": ("반도체 지수", "SOXX"), "QQQ": ("나스닥", "기술주 QQQ"), "SPY": ("S&P500", "대표 500곳 SPY")}
+WEB_Z = {"up": "올라서 시작", "flat": "거의 그대로", "down": "내려서 시작"}
+FORECAST_NOTE = '<div class="forecast-note" role="note"><b class="note-title">예측이 아니에요</b><p>지난 기록을 세어 본 숫자예요. 이번에도 똑같다는 뜻은 아니에요. 투자는 직접 판단해 주세요.</p></div>'
+WEEKDAYS = "월화수목금토일"
+
+
+def web_footer():
+    """Site notes (해요체 disclaimer) + shared ditoaxis operator footer; one contentinfo landmark."""
+    e = html.escape
+    privacy = web_url('privacy/')
+    return ('<footer class="site-footer"><div class="notes"><span>정보를 보여 드리는 서비스예요. 투자 권유나 예측이 아니에요.</span>'
+            f'<nav><a href="{e(web_url("about/"))}">집계 기준</a><a href="{e(privacy)}">개인정보처리방침</a></nav></div>'
+            + DX_FOOTER.replace('href="/privacy/"', f'href="{e(privacy)}"') + '</footer>')
+
+
+def web_words(value, verb):
+    """+0.0123, '마감' -> '1.23% 올라서 마감했어요' (색만으로 뜻을 전하지 않아요)."""
+    if abs(value) < 0.00005:
+        return f'어제 마감과 같게 {verb}했어요'
+    return f'{abs(value) * 100:.2f}% {"올라서" if value > 0 else "내려서"} {verb}했어요'
 
 
 def web_url(path=""):
@@ -403,11 +631,11 @@ shareButton.addEventListener('click', async function () {{
 <link rel="canonical" href="{e(url)}"><meta property="og:url" content="{e(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(description)}">{image_meta}{ad_head}
 {WEB_ANALYTICS}
 <link rel="icon" href="{e(web_url('favicon.svg'))}" type="image/svg+xml">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<style>{WEB_CSS}</style></head><body><a class="skip" href="#main">본문으로 이동</a><div class="wrap">
-<nav class="service-family" aria-label="디토엑시스"><a href="https://ditoaxis.com/#products"><span class="axis-mark" aria-hidden="true">+</span>디토엑시스 서비스<span aria-hidden="true">↗</span></a></nav>
+<style>{WEB_CSS}</style></head><body><a class="skip" href="#main">본문으로 이동</a>{DX_BAR}<div class="wrap">
 <header class="site-header"><a class="brand" href="{e(web_url())}">밤사이 코스피</a><nav aria-label="사이트"><a href="{e(web_url('archive/' + image_day[:7] + '/')) if image_day else e(web_url() + '#records')}">지난 기록</a><a href="{e(web_url('about/'))}">집계 기준</a></nav></header>
-<main id="main" tabindex="-1">{body}</main><footer class="site-footer"><span>정보 제공용, 투자 판단 자료 아님</span><nav><a href="{e(web_url('about/'))}">집계 기준</a><a href="{e(web_url('privacy/'))}">개인정보처리방침</a></nav></footer></div>{share_script}{WEB_TABLE_SCRIPT if 'class="table-scroll"' in body else ''}</body></html>'''
+<main id="main" tabindex="-1">{body}</main>{web_footer()}</div>{share_script}{DX_CLOSE_JS}{WEB_TABLE_SCRIPT if 'class="table-scroll"' in body else ''}</body></html>'''
 
 
 def web_frequency(record, hist):
@@ -444,36 +672,36 @@ def web_ny(record, latest):
             bar = f'<i style="left:{left:.3f}%;width:{width:.3f}%;background:{color(value)}"></i>'
         value_class = ' class="pending-value"' if value is None else ''
         missing = "자료 대기" if latest and not no_us_session(record) else "기록이 없어요"
-        rows.append(f'<div class="graphic-row"><div class="row-label"><span>{html.escape(LABEL[k])}<span class="ticker">{k}</span></span><strong{value_class}>{pct(value) if value is not None else missing}</strong></div><div class="ny-track" aria-hidden="true">{bar}</div><span class="source-state">{reused}</span></div>')
+        rows.append(f'<div class="graphic-row"><div class="row-label"><span>{html.escape(WEB_LABEL[k][0])}<span class="ticker">{html.escape(WEB_LABEL[k][1])}</span></span><strong{value_class}>{pct(value) if value is not None else missing}</strong></div><div class="ny-track" aria-hidden="true">{bar}</div><span class="source-state">{reused}</span></div>')
     if 'reused' in record.get('source_states', {}).values():
-        note = '이전에 확인한 뉴욕 자료예요'
+        note = '이전에 확인한 미국 증시 자료예요'
     elif len(values) < 3:
-        note = '뉴욕 자료를 기다리고 있어요' if latest and not no_us_session(record) else '비교할 뉴욕 자료가 없어요' if not values else '일부 뉴욕 기록이 없어요'
+        note = '미국 증시 자료를 기다리고 있어요' if latest and not no_us_session(record) else '비교할 미국 증시 자료가 없어요' if not values else '일부 미국 증시 기록이 없어요'
     elif all(v > 0 for v in values):
-        note = '뉴욕 세 지표가 모두 올랐어요'
+        note = '미국 세 지수가 모두 올랐어요'
     elif all(v < 0 for v in values):
-        note = '뉴욕 세 지표가 모두 내렸어요'
+        note = '미국 세 지수가 모두 내렸어요'
     elif all(v == 0 for v in values):
-        note = '뉴욕 세 지표가 그대로였어요'
+        note = '미국 세 지수가 그대로였어요'
     else:
-        note = '뉴욕 세 지표의 방향이 엇갈렸어요'
-    return '<section class="ny-area" aria-labelledby="ny-title"><h2 id="ny-title">밤사이 뉴욕</h2>' + ''.join(rows) + f'<p class="answer">{note}</p></section>'
+        note = '미국 세 지수의 방향이 엇갈렸어요'
+    return '<section class="ny-area" aria-labelledby="ny-title"><h2 id="ny-title">어젯밤 미국 증시</h2>' + ''.join(rows) + f'<p class="answer">{note}</p></section>'
 
 
 def web_frequency_graph(f, latest, no_session=False):
     n = f["n"]
     if n < 30:
-        missing = "비교할 뉴욕 자료가 없어요" if no_session else "자료가 채워지면 통계를 보여드릴게요" if latest else "비교할 과거 기록이 없어요"
+        missing = "비교할 미국 증시 자료가 없어요" if no_session else "자료가 채워지면 통계를 보여드릴게요" if latest else "비교할 과거 기록이 없어요"
         message = missing if not n else f'비슷한 밤이 {n}번뿐이라 통계는 안 냈어요'
         content = f'<div class="empty">{message}</div>'
     else:
         rows = []
         for z in ("up", "flat", "down"):
             share = f[z] / n
-            rows.append(f'<div class="graphic-row"><div class="row-label"><span>{LABEL_Z[z]}</span><span class="frequency-value"><span>{n:,}번 중 {f[z]:,}번</span><span>({share:.0%})</span></span></div><div class="frequency-track" aria-hidden="true"><i style="width:{share * 100:.3f}%;background:var(--{z})"></i></div></div>')
+            rows.append(f'<div class="graphic-row"><div class="row-label"><span>{WEB_Z[z]}</span><span class="frequency-value"><span class="dx-sr">{n:,}번 중 {f[z]:,}번, </span><b class="freq-pct">{share:.0%}</b></span></div><div class="frequency-track" aria-hidden="true"><i style="width:{share * 100:.3f}%;background:var(--{z})"></i></div></div>')
         majority = max(("up", "down", "flat"), key=lambda z: f[z])
-        content = '<div class="frequency-scale"><span>과거 시가 빈도</span><span>0~100%</span></div>' + ''.join(rows) + f'<p class="sample-count">비슷한 밤 {n:,}번</p><p class="answer">코스피는 {tenths(f[majority] / n)} {WENT[majority]}</p>'
-    return f'<section class="frequency-area" aria-labelledby="frequency-title" data-sample-count="{n}"><h2 id="frequency-title">비슷한 밤 다음에는</h2>{content}</section>'
+        content = ''.join(rows) + f'<p class="answer">지난 {n:,}번 중 {f[majority]:,}번 {WENT[majority]}</p>' + FORECAST_NOTE
+    return f'<section class="frequency-area" aria-labelledby="frequency-title" data-sample-count="{n}"><h2 id="frequency-title">비슷했던 밤 다음 날, 코스피는 어떻게 시작했을까요?</h2>{content}</section>'
 
 
 def web_result(record, latest):
@@ -481,18 +709,18 @@ def web_result(record, latest):
     closed = record.get("close") if record.get("status") == "done" else None
     scale = max([.01] + [abs(v) * 1.15 for v in (opened, closed) if v is not None])
     rows = []
-    for name, value, kind in (("시가", opened, "open"), ("종가", closed, "close")):
+    for name, value, kind in (("아침 시작<span class=\"ticker\">시가</span>", opened, "open"), ("오후 마감<span class=\"ticker\">종가</span>", closed, "close")):
         waiting = "기록이 없어요" if not latest else "시가 대기" if kind == "open" else "종가 대기"
         label = f'<strong>{pct(value)}</strong>' if value is not None else f'<strong class="pending-value">{waiting}</strong>'
         mark = f'<i class="result-mark {kind}" style="left:{50 + value / scale * 50:.3f}%;background:{color(value)}"></i>' if value is not None else ""
         rows.append(f'<div class="result-row" data-observed="{str(value is not None).lower()}"><div class="row-label"><span>{name}</span>{label}</div><div class="result-track" aria-hidden="true">{mark}</div></div>')
     if closed is not None:
-        answer = f'코스피는 {pct(closed)}로 마감했어요'
+        answer = f'코스피는 {web_words(closed, "마감")}'
     elif opened is not None:
-        answer = f'코스피는 {pct(opened)}로 시작했어요'
+        answer = f'코스피는 {web_words(opened, "시작")}'
     else:
-        answer = "시가가 들어오면 여기에 표시해요" if latest else "이날은 관측한 코스피 기록이 없어요"
-    return f'<section class="result-area" aria-labelledby="result-title"><h2 id="result-title">코스피 시가와 종가</h2><p class="result-basis">전일 종가 대비 등락률</p><div class="result-axis"><span>{-scale:.1%}</span><span>0%</span><span>+{scale:.1%}</span></div>{"".join(rows)}<p class="answer">{answer}</p></section>'
+        answer = "코스피는 9시에 시작해요. 시작하면 여기에 보여요." if latest else "이날은 관측한 코스피 기록이 없어요"
+    return f'<section class="result-area" aria-labelledby="result-title"><h2 id="result-title">이날 코스피</h2><p class="result-basis">어제 마감보다</p><div class="result-axis"><span>{-scale:.1%}</span><span>0%</span><span>+{scale:.1%}</span></div>{"".join(rows)}<p class="answer">{answer}</p></section>'
 
 
 def web_value(value, waiting="기록이 없어요"):
@@ -546,18 +774,20 @@ def web_day(record, records, hist, home=False):
     latest = date == records[0]["date"]
     pos = next(i for i, r in enumerate(records) if r["date"] == date)
     links = []
-    for rel, i, label in (("prev", pos + 1, "이전 기록"), ("next", pos - 1, "다음 기록")):
+    for rel, i, label in (("prev", pos + 1, "‹"), ("next", pos - 1, "›")):
         if 0 <= i < len(records):
             d = records[i]["date"]
-            links.append(f'<a rel="{rel}" href="{html.escape(web_url(d + "/"))}">{label} {d[5:].replace("-", "/")}</a>')
+            day_label = f'{int(d[5:7])}월 {int(d[8:10])}일 기록'
+            links.append(f'<a rel="{rel}" href="{html.escape(web_url(d + "/"))}">' + (f'{label} {day_label}' if rel == "prev" else f'{day_label} {label}') + '</a>')
     if not latest:
         links.append(f'<a href="{html.escape(web_url())}">최신 기록 보기</a>')
     title = f'{date} 코스피 기록'
-    heading = f'<div class="page-heading"><h1><time datetime="{date}">{korean_date(date)}</time></h1><button class="share" type="button" hidden>공유</button></div>'
+    weekday = WEEKDAYS[dt.date.fromisoformat(date).weekday()]
+    heading = f'<div class="page-heading"><div><h1>어젯밤 미국 증시와 코스피</h1><p class="date-line"><time datetime="{date}">{korean_date(date)}({weekday})</time> 기록</p></div><button class="share" type="button" hidden>공유</button></div>'
     nav = '<nav class="day-nav" aria-label="날짜별 기록">' + ''.join(links) + '</nav>'
     f = web_frequency(record, hist)
     band = '<div class="answer-band">' + web_ny(record, latest) + '<div class="kospi-side">' + web_frequency_graph(f, latest, no_us_session(record)) + web_result(record, latest) + '</div></div>'
-    table = f'<section class="comparison" id="records"><div class="section-heading"><h2>최근 5거래일 비교</h2><a href="{html.escape(web_url("archive/" + date[:7] + "/"))}">월별 기록 보기</a></div>{comparison_table(records, date)}</section>'
+    table = f'<section class="comparison" id="records"><div class="section-heading"><h2>최근 5일 기록</h2><a href="{html.escape(web_url("archive/" + date[:7] + "/"))}">월별 기록 보기</a></div>{comparison_table(records, date)}</section>'
     ad = ""
     if ADSENSE and ADSENSE_SLOT and has_kospi_data(record):
         ad = f'<aside class="ad-slot" aria-label="광고"><div>광고</div><ins class="adsbygoogle" data-ad-client="{html.escape(ADSENSE)}" data-ad-slot="{html.escape(ADSENSE_SLOT)}" data-ad-format="horizontal" data-full-width-responsive="true"></ins></aside><script>(window.adsbygoogle = window.adsbygoogle || []).push({{}});</script>'
@@ -584,7 +814,7 @@ def web_about(hist):
 <h2>밤사이 뉴욕을 어떻게 보나요?</h2><p>SOXX는 반도체, QQQ는 나스닥100, SPY는 S&amp;P500을 따라가는 ETF예요. 지수 자체의 등락률과는 차이가 있을 수 있어요. 코스피 전일 거래일부터 이 날짜 전날까지 미국 거래가 여러 번 열렸다면 그 기간의 누적 등락률을 써요.</p>
 <h2>비슷한 밤을 어떻게 묶나요?</h2><p>SPY와 SOXX의 등락률을 평균 낸 뒤 0.4를 곱해 같은 구간의 밤을 모아요. QQQ는 비교용으로 보여주며 구간 계산에는 넣지 않아요.</p>
 <table class="method-table"><thead><tr><th>구간</th><th>평균에 0.4를 곱한 값</th></tr></thead><tbody><tr><td>강한 하락</td><td>-0.5% 미만</td></tr><tr><td>하락</td><td>-0.5% 이상 -0.3% 미만</td></tr><tr><td>보합</td><td>-0.3% 이상 +0.3% 미만</td></tr><tr><td>상승</td><td>+0.3% 이상 +0.5% 미만</td></tr><tr><td>강한 상승</td><td>+0.5% 이상</td></tr></tbody></table>
-<h2>과거 빈도는 무엇인가요?</h2><p>비슷한 밤 뒤에 코스피가 전일 종가보다 얼마나 달라져 시작했는지 세어요. 시가가 +0.3%를 넘으면 상승, -0.3%보다 낮으면 하락, 그 사이인 ±0.3%는 경계를 포함해 보합이에요. 비슷한 밤이 30번보다 적으면 비율을 보여주지 않아요. 과거 빈도는 앞으로의 상승 확률이 아니에요.</p>
+<h2>과거 빈도는 무엇인가요?</h2><p>비슷한 밤 뒤에 코스피가 전일 종가보다 얼마나 달라져 시작했는지 세어요. 시가가 +0.3%를 넘으면 상승, -0.3%보다 낮으면 하락, 그 사이인 ±0.3%는 경계를 포함해 보합이에요. 비슷한 밤이 30번보다 적으면 비율을 보여주지 않아요. 과거 빈도는 앞으로의 상승 확률이 아니에요. 화면에서는 상승을 '올라서 시작', 보합을 '거의 그대로', 하락을 '내려서 시작'이라고 불러요. 시가가 어제 마감과 ±{FLAT * 100:.1f}% 안이면 '거의 그대로'로 셌어요.</p>
 <h2>어느 기간을 쓰나요?</h2><p>2021년부터 가격을 조회해요. {period} 각 날짜의 빈도에는 그 날짜보다 앞선 코스피 거래일만 넣어요. 이 날짜와 그 뒤의 자료는 쓰지 않아요. 이력을 구하지 못하면 이전에 저장한 통계를 대신 보여주지 않아요.</p>
 <h2>시가와 종가는 어떻게 보나요?</h2><p>시가와 종가를 각각 전일 종가와 비교해요. 두 점은 장중 가격 경로가 아니에요. 최신 기록에서 아직 관측하지 못한 가격은 대기로 남겨요. 지난 기록에서 빠진 가격은 기록이 없다고 표시해요. 이미 확인한 같은 날짜의 값을 다시 쓸 때는 기존 게시값이라고 표시해요.</p>
 <h2>언제 새로고침하나요?</h2><p>한국 시간 평일 06:45에 뉴욕 자료, 09:06에 코스피 시가, 15:40에 종가를 반영하도록 실행해요. 자료가 늦게 오거나 실행이 지연되면 이후 재시도에서 채워요. 관측값이 없다는 이유만으로 휴장이라고 표시하지 않아요.</p>
@@ -670,11 +900,20 @@ def restyle():
         text, count = re.subn(r'<style>.*?</style>', lambda _: '<style>' + WEB_CSS + '</style>', text, count=1, flags=re.S)
         if count != 1:
             raise RuntimeError(f'Missing published stylesheet in {page.name}')
-        if 'class="service-family"' not in text:
-            old = '<body><div class="wrap">'
-            if old not in text:
+        # Shared ditoaxis shell (outside <main>): dx-bar replaces the old company strip, shared footer.
+        text = re.sub(r'\s*<nav class="service-family"[^>]*>.*?</nav>\s*', '\n', text, count=1, flags=re.S)
+        if 'class="dx-bar"' not in text:
+            if '<body><div class="wrap">' in text:
+                text = text.replace('<body><div class="wrap">', '<body><a class="skip" href="#main">본문으로 이동</a>' + DX_BAR + '<div class="wrap">', 1)
+            elif '<a class="skip" href="#main">본문으로 이동</a><div class="wrap">' in text:
+                text = text.replace('<a class="skip" href="#main">본문으로 이동</a><div class="wrap">', '<a class="skip" href="#main">본문으로 이동</a>' + DX_BAR + '<div class="wrap">', 1)
+            else:
                 raise RuntimeError('Published shell is unknown; refusing partial update')
-            text = text.replace(old, '<body><a class="skip" href="#main">본문으로 이동</a><div class="wrap"><nav class="service-family" aria-label="디토엑시스"><a href="https://ditoaxis.com/#products"><span class="axis-mark" aria-hidden="true">+</span>디토엑시스 서비스<span aria-hidden="true">↗</span></a></nav>', 1)
+        text, footers = re.subn(r'<footer class="site-footer">.*?</footer>', lambda _: web_footer(), text, count=1, flags=re.S)
+        if not footers and '</main>' in text:
+            text = text.replace('</main>', '</main>' + web_footer(), 1)
+        if DX_CLOSE_JS not in text:
+            text = text.replace('</body>', DX_CLOSE_JS + '</body>', 1)
         text = re.sub(r'<main(?:\s[^>]*)?>', '<main id="main" tabindex="-1">', text, count=1)
         tables = re.findall(table_pattern, text, re.S)
         if 'class="table-scroll"' not in text:
