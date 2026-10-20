@@ -138,8 +138,30 @@ def tenths(share):
     return f"10번 중 {k}번" if k else f"100번 중 {round(share * 100)}번"
 
 
+def shown_pct(x):
+    """화면에 보이는 값(퍼센트, 소수 둘째 자리 반올림). 구간 판정은 이 값으로 해요."""
+    return round(x * 100, 2)
+
+
+def is_flat(x):
+    """'거의 그대로' = 보이는 값이 ±0.3% 이내(경계 포함). kospi-threshold.md"""
+    return abs(shown_pct(x)) <= round(FLAT * 100, 2)
+
+
+# 시가·마감 공통 크기 구간 (kospi-threshold.md): 0.3% 초과~1% 미만 조금, 1~2% 미만 꽤, 2~5% 미만 많이, 5% 이상 아주 크게
+BANDS = ((1.0, "조금"), (2.0, "꽤"), (5.0, "많이"))
+
+
+def band_of(x):
+    """보이는 값 기준 크기 말. 거의 그대로면 None."""
+    if is_flat(x):
+        return None
+    p = abs(shown_pct(x))
+    return next((word for limit, word in BANDS if p < limit), "아주 크게")
+
+
 def zone_of(x):
-    return None if x is None else ("up" if x > FLAT else "down" if x < -FLAT else "flat")
+    return None if x is None else ("flat" if is_flat(x) else "up" if x > 0 else "down")
 
 
 def headline(f, opened, status, source_states=None):
@@ -260,7 +282,8 @@ def pct(x, sign=True):
 
 
 def color(x):
-    return "var(--flat)" if x is None or abs(x) < 0.0005 else ("var(--up)" if x > 0 else "var(--down)")
+    # 숫자 색도 '거의 그대로'(보이는 값 ±0.3% 이내)면 회색이에요. 문구와 색이 어긋나지 않게.
+    return "var(--flat)" if x is None or is_flat(x) else ("var(--up)" if x > 0 else "var(--down)")
 
 
 def us_hours(day):
@@ -582,10 +605,14 @@ def web_footer():
 
 
 def web_words(value, verb):
-    """+0.0123, '마감' -> '1.23% 올라서 마감했어요' (색만으로 뜻을 전하지 않아요)."""
-    if abs(value) < 0.00005:
+    """+0.0123, '마감' -> '1.23% 꽤 올라서 마감했어요' (색만으로 뜻을 전하지 않아요).
+    구간은 kospi-threshold.md: ±0.3% 이내 거의 그대로 / 조금 / 꽤 / 많이 / 아주 크게 (보이는 반올림 값 기준)."""
+    p = shown_pct(value)
+    if p == 0:
         return f'어제 마감과 같게 {verb}했어요'
-    return f'{abs(value) * 100:.2f}% {"올라서" if value > 0 else "내려서"} {verb}했어요'
+    if is_flat(value):
+        return f'{abs(p):.2f}% {"올라" if p > 0 else "내려"} 거의 그대로 {verb}했어요'
+    return f'{abs(p):.2f}% {band_of(value)} {"올라서" if p > 0 else "내려서"} {verb}했어요'
 
 
 def web_url(path=""):
