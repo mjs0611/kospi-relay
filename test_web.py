@@ -112,7 +112,10 @@ class WebTests(unittest.TestCase):
 
     def test_restyle_preserves_published_values_files_and_is_idempotent_without_fetch(self):
         source = self.restyle_fixture()
-        protected = {p.name: p.read_bytes() for p in self.site.iterdir() if p.suffix != '.html'}
+        for name in ('favicon.svg',):
+            (self.site / name).write_text('stale presentation asset')
+        protected = {p.name: p.read_bytes() for p in self.site.iterdir()
+                     if p.suffix != '.html' and p.name != 'favicon.svg'}
         r.restyle()
         once = (self.site / 'index.html').read_text()
         self.assertIn('수치는 +1.23% · 자료 대기', once)
@@ -120,7 +123,12 @@ class WebTests(unittest.TestCase):
         self.assertEqual(once.count('class="table-scroll"'), 1)
         r.restyle()
         self.assertEqual((self.site / 'index.html').read_text(), once)
-        self.assertEqual({p.name: p.read_bytes() for p in self.site.iterdir() if p.suffix != '.html'}, protected)
+        self.assertEqual({self.site / name: (self.site / name).read_bytes() for name in protected},
+                         {self.site / name: content for name, content in protected.items()})
+        for name in ('favicon.svg',):
+            self.assertEqual((self.site / name).read_bytes(), (Path(r.__file__).parent / 'assets' / name).read_bytes())
+        self.assertEqual([n.attrs['href'] for n in self.read().find('link') if n.attrs.get('rel') == 'icon'],
+                         [r.web_url('favicon.svg')])
         self.fetch.assert_not_called()
         self.assertFalse(self.captures)
 
@@ -153,7 +161,7 @@ class WebTests(unittest.TestCase):
                         self.assertIn('pagead2.googlesyndication.com', scripts[0].attrs['src'])
                         self.assertEqual(scripts[1].attrs['src'], 'https://ditoaxis.com/m.js')
         self.fetch.assert_not_called()
-        self.assertFalse(self.captures)
+        self.assertEqual(len(self.captures), 2)
 
     def test_privacy_explains_cookie_free_aggregate_analytics(self):
         r.regenerate(self.hist)
@@ -165,6 +173,36 @@ class WebTests(unittest.TestCase):
             self.assertIn(text, doc.root.text)
         self.assertIn('https://adssettings.google.com', doc.links())
         self.assertIn('https://policies.google.com/technologies/ads', doc.links())
+
+    def test_generated_assets_and_landscape_metadata_without_changing_legacy_card(self):
+        day = '2026-10-16'
+        self.publish(day, 'close')
+        for route in ('', day, 'archive/2026-10', 'about', 'privacy'):
+            doc = self.read(route)
+            self.assertEqual([n.attrs for n in doc.find('link') if n.attrs.get('rel') == 'icon'],
+                             [{'rel': 'icon', 'href': r.web_url('favicon.svg'), 'type': 'image/svg+xml'}])
+        for route in ('', day, 'archive/2026-10'):
+            meta = {n.attrs.get('property', n.attrs.get('name')): n.attrs.get('content') for n in self.read(route).find('meta')}
+            self.assertEqual(meta['og:image'], r.web_url(day + '/og.png'))
+            self.assertEqual(meta['twitter:image'], meta['og:image'])
+            self.assertEqual((meta['og:image:width'], meta['og:image:height']), ('1200', '630'))
+            self.assertEqual(meta['og:image:type'], 'image/png')
+            self.assertEqual(meta['twitter:card'], 'summary_large_image')
+        self.assertTrue((self.site / day / 'og.png').is_file())
+        self.assertEqual((self.site / day / 'relay.png').read_bytes(), (self.site / 'relay.png').read_bytes())
+        self.assertNotIn('class="og-card"', self.captures[0])
+        self.assertIn('.sheet{width:540px;', self.captures[0])
+        self.assertNotIn('.og-card .sheet{', self.captures[0])
+        self.assertIn('class="og-card"', self.captures[1])
+        self.assertIn('.og-card .sheet{width:600px;height:315px;', self.captures[1])
+        self.assertEqual(self.capture_targets, [self.site / 'relay.png', self.site / day / 'og.png'])
+        og = self.site / day / 'og.png'
+        og.write_bytes(b'preserved landscape image')
+        r.regenerate(self.hist)
+        self.assertEqual(og.read_bytes(), b'preserved landscape image')
+        self.assertEqual(len(self.captures), 2)
+        for name in ('favicon.svg',):
+            self.assertEqual((self.site / name).read_bytes(), (Path(r.__file__).parent / 'assets' / name).read_bytes())
 
     def test_restyle_adds_analytics_to_all_html_once_and_preserves_ads_and_privacy(self):
         source = self.restyle_fixture()
@@ -278,9 +316,11 @@ class WebTests(unittest.TestCase):
         self.patch(r, 'ADSENSE', '')
         self.patch(r, 'ADSENSE_SLOT', '')
         self.captures = []
+        self.capture_targets = []
 
         def screenshot(source, target):
             self.captures.append(Path(source).read_text(encoding='utf-8'))
+            self.capture_targets.append(Path(target))
             Path(target).write_bytes(b'fixture share image')
 
         self.patch(r, 'screenshot', side_effect=screenshot)
@@ -790,11 +830,11 @@ class WebTests(unittest.TestCase):
         archive = self.site / 'days' / (day + '.json')
         png = self.site / day / 'relay.png'
         original = json.loads(archive.read_text())
-        self.assertEqual(len(self.captures), 1)
+        self.assertEqual(len(self.captures), 2)
         png.write_bytes(b'unchanged publication PNG')
         archive.write_text(json.dumps({**original, 'built_at': '2026-10-16T16:00+09:00'}))
         r.backfill(1)
-        self.assertEqual(len(self.captures), 1)
+        self.assertEqual(len(self.captures), 2)
         self.assertEqual(png.read_bytes(), b'unchanged publication PNG')
         changed_us = {**original['us'], 'SPY': [0, -.02]}
         for key, value in [('status', 'filled'), ('open', .99), ('close', -.99), ('us', changed_us),
@@ -806,7 +846,7 @@ class WebTests(unittest.TestCase):
             png.write_bytes(b'stale ' + key.encode())
             before = len(self.captures)
             r.backfill(1)
-            self.assertEqual(len(self.captures), before + 1, key)
+            self.assertEqual(len(self.captures), before + 2, key)
             self.assertEqual(json.loads(archive.read_text())[key], original[key])
             self.assertEqual(png.read_bytes(), b'fixture share image')
         before = len(self.captures)

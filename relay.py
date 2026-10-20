@@ -280,7 +280,7 @@ def pending_text(status):
     return "09:00에 채워진다" if status == "pending" else ("오늘 휴장" if status == "closed" else "")
 
 
-def share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None, og_image=None, source_note=None, source_states=None):
+def share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None, og_image=None, source_note=None, source_states=None, landscape=False):
     date_ko = f"{D.month}월 {D.day}일 {'월화수목금토일'[D.weekday()]}요일"
     stamp_t = {"pending": "자료 대기", "done": "마감 반영"}.get(status, "시가 반영")
     pending = pending_text(status)
@@ -292,7 +292,8 @@ def share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None
 <link rel="canonical" href="{SITE_URL}/{D:%Y-%m-%d}/">
 <meta property="og:type" content="article"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:url" content="{SITE_URL}/{D:%Y-%m-%d}/">
 <meta property="og:title" content="{html.escape(head['cond'])}"><meta property="og:description" content="{html.escape(head['claim'] or '오늘 코스피 시가')}">
-<meta property="og:image" content="{og_image or f'{SITE_URL}/{D:%Y-%m-%d}/relay.png'}"><meta property="og:image:width" content="1080"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="{og_image or f'{SITE_URL}/{D:%Y-%m-%d}/og.png'}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{og_image or f'{SITE_URL}/{D:%Y-%m-%d}/og.png'}">
+<link rel="icon" href="{SITE_URL.rstrip('/')}/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* 밤 / 낮 두 쪽. 왼쪽은 밤사이 뉴욕(어둡게), 오른쪽은 다음 날 코스피 시가(밝게). 경계가 곧 릴레이.
@@ -314,9 +315,10 @@ footer{{grid-column:1/-1;display:flex;justify-content:space-between;gap:12px;pad
 footer a{{color:#2C5FD6}}
 .share{{margin-left:10px;border:1px solid #CFD5DE;background:#FFF;color:#10172A;border-radius:6px;padding:4px 10px;font:600 11px var(--sans);cursor:pointer}}
 @media (max-width:480px){{.sheet{{grid-template-columns:1fr}}.cond{{margin-top:18px}}.claim{{margin-top:4px}}}}
-</style></head><body><div class="sheet">
+{'.og-card .sheet{width:600px;height:315px;grid-template-columns:230px 1fr;grid-template-rows:1fr auto;border-radius:0}.og-card .night,.og-card .day{padding:16px 20px;min-height:0}.og-card .cond,.og-card .claim{font-size:18px;line-height:1.35;margin:18px 0 0}.og-card .lab{margin:16px 0 6px}.og-card .night svg{height:76px}.og-card .day svg{height:86px}.og-card .cap{margin-top:6px}.og-card .tail,.og-card .provenance{display:none}.og-card footer{padding:10px 20px;font-size:9px}.og-card .share{display:none}' if landscape else ''}
+</style></head><body{' class="og-card"' if landscape else ''}><div class="sheet">
 <section class="night"><p class="brand">밤사이 코스피</p>{head_html(head)[0]}<p class="lab">뉴욕 지표</p>{ny}</section>
-<section class="day"><p class="stamp">{date_ko} <b>{stamp_t}</b></p>{head_html(head)[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}{f'<p class="tail">{html.escape(tail)}</p>' if tail else ''}{f'<p class="cap">{html.escape(source_note)}</p>' if source_note else ''}</section>
+<section class="day"><p class="stamp">{date_ko} <b>{stamp_t}</b></p>{head_html(head)[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}{f'<p class="tail">{html.escape(tail)}</p>' if tail else ''}{f'<p class="cap provenance">{html.escape(source_note)}</p>' if source_note else ''}</section>
 <footer><span>정보 제공용, 투자 판단 자료 아님 · <a href="../privacy/">개인정보처리방침</a></span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}<button class="share" type="button">공유</button></span></footer>
 <script>
 /* 공유: Web Share가 있으면 시스템 공유 시트, 없으면 링크 복사. 링크는 이 날짜 페이지(OG 카드 붙음) */
@@ -381,7 +383,7 @@ def web_shell(title, path, body, description=None, image_day=None, share_day=Non
     url = web_url(path)
     description = description or title
     robots_meta = '<meta name="robots" content="noindex">' if noindex else ''
-    image_meta = f'<meta property="og:image" content="{e(web_url(image_day + "/relay.png"))}"><meta name="twitter:card" content="summary_large_image">' if image_day else ""
+    image_meta = f'<meta property="og:image" content="{e(web_url(image_day + "/og.png"))}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="{e(title)} · 밤사이 뉴욕 지표와 코스피 시가"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{e(web_url(image_day + "/og.png"))}">' if image_day else ""
     share_script = ""
     if share_day:
         # JSON encoding plus escaping '<' keeps published text out of script markup.
@@ -400,6 +402,7 @@ shareButton.addEventListener('click', async function () {{
 <title>{e(title)} | 밤사이 코스피</title><meta name="description" content="{e(description)}">{robots_meta}
 <link rel="canonical" href="{e(url)}"><meta property="og:url" content="{e(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(description)}">{image_meta}{ad_head}
 {WEB_ANALYTICS}
+<link rel="icon" href="{e(web_url('favicon.svg'))}" type="image/svg+xml">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>{WEB_CSS}</style></head><body><a class="skip" href="#main">본문으로 이동</a><div class="wrap">
 <nav class="service-family" aria-label="디토엑시스"><a href="https://ditoaxis.com/#products"><span class="axis-mark" aria-hidden="true">+</span>디토엑시스 서비스<span aria-hidden="true">↗</span></a></nav>
@@ -612,7 +615,7 @@ def add_web_analytics(source):
 def restyle():
     """Apply presentation to existing published HTML without any price lookup.
 
-    Historical frequencies stay in their published markup. No JSON, image,
+    Historical frequencies stay in their published markup. No JSON, share PNG,
     domain, advertising configuration or financial text is regenerated.
     """
     if not (SITE / 'index.html').is_file() or not (SITE / 'latest.json').is_file():
@@ -624,7 +627,7 @@ def restyle():
     def protected():
         return {str(p.relative_to(SITE)): hashlib.sha256(p.read_bytes()).hexdigest()
                 for p in SITE.rglob('*') if p.is_file() and '.git' not in p.relative_to(SITE).parts
-                and p.suffix != '.html'}
+                and p.suffix != '.html' and p.relative_to(SITE).as_posix() != 'favicon.svg'}
 
     def main_text(source):
         bodies = re.findall(r'<main(?:\s[^>]*)?>(.*?)</main>', source, re.S)
@@ -652,6 +655,9 @@ def restyle():
                 raise RuntimeError(f'Missing published head in {page.relative_to(SITE)}; refusing partial update')
             print(f'::warning::Skipped headless HTML {page.relative_to(SITE)}; left unchanged')
             continue
+        icon = f'<link rel="icon" href="{html.escape(web_url("favicon.svg"))}" type="image/svg+xml">'
+        if icon not in text:
+            text = re.sub(r'</head\s*>', lambda _: icon + '\n</head>', text, count=1, flags=re.I)
         if page == SITE / 'privacy' / 'index.html' and 'https://www.cloudflare.com/web-analytics/' not in text:
             if '<h2>문의</h2>' not in text:
                 raise RuntimeError('Published privacy template is unknown; refusing partial update')
@@ -660,7 +666,7 @@ def restyle():
             if page == SITE / 'index.html':
                 raise RuntimeError('Published homepage template is unknown')
             updates[page] = text
-            continue  # Other templates receive only analytics and the privacy notice.
+            continue  # Other templates receive shared head changes and the privacy notice.
         text, count = re.subn(r'<style>.*?</style>', lambda _: '<style>' + WEB_CSS + '</style>', text, count=1, flags=re.S)
         if count != 1:
             raise RuntimeError(f'Missing published stylesheet in {page.name}')
@@ -685,9 +691,10 @@ def restyle():
         raise RuntimeError('No published homepage to restyle')
     for page, text in updates.items():
         page.write_text(text, encoding='utf-8')
+    write_web_assets()
     if protected() != before:
         raise RuntimeError('Published non-HTML files changed; refusing publication')
-    print(f'restyled {len(updates)} existing pages; financial text, tables and non-HTML hashes unchanged')
+    print(f'restyled {len(updates)} existing pages; financial text, tables and published data hashes unchanged; refreshed favicon.svg')
 
 
 def load_web_records():
@@ -725,7 +732,7 @@ def load_web_records():
 
 
 def regenerate(hist=None):
-    """Rebuild all HTML from published records without changing JSON or share PNGs.
+    """Rebuild HTML and missing OG images; preserve published JSON and relay PNGs.
 
     Pass aligned fixture history for offline rendering. CLI fetches it once; an
     outage deliberately empties web statistics instead of trusting legacy freq.
@@ -758,6 +765,11 @@ def regenerate(hist=None):
     for r in records:
         day = SITE / r["date"]
         day.mkdir(exist_ok=True)
+        if not (day / "og.png").exists():
+            f = None if no_us_session(r) else web_frequency(r, hist)
+            screenshot_card(share_card_page(pd.Timestamp(r["date"]), r.get("prev"), r.get("us", {}), r.get("vix"),
+                                           r.get("open"), f, r.get("status", "pending"), None,
+                                           source_states=r.get("source_states"), landscape=True), day / "og.png")
         (day / "index.html").write_text(web_day(r, records, hist), encoding="utf-8")
     for month in months:
         folder = SITE / "archive" / month
@@ -887,10 +899,12 @@ def build(phase):
     (SITE / "days").mkdir(exist_ok=True); (SITE / "days" / f"{D:%Y-%m-%d}.json").write_text(payload, encoding="utf-8")
     write_index()
     (SITE / ".nojekyll").touch()
-    regenerate(hist)
     screenshot_card(share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail,
                                   source_note=source_note, source_states=source_states), SITE / "relay.png")
-    shutil.copyfile(SITE / "relay.png", day / "relay.png")   # 날짜 페이지 OG 이미지 = 그날 카드
+    shutil.copyfile(SITE / "relay.png", day / "relay.png")   # 기존 콘텐츠 캡처 경로 보존
+    screenshot_card(share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail,
+                                  source_note=source_note, source_states=source_states, landscape=True), day / "og.png")
+    regenerate(hist)
     print(f"built {D.date()} {status} freq={f}")
 
 
@@ -920,7 +934,8 @@ PRIVACY = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta na
 
 def write_site_files(days):
     """검색·광고 심사용 정적 파일. SITE_URL이 github.io가 아니면 CNAME도 쓴다(Pages 커스텀 도메인)."""
-    privacy = PRIVACY.replace('</head>', f'<link rel="canonical" href="{html.escape(web_url("privacy/"))}"></head>')
+    privacy = PRIVACY.replace('</head>', f'<link rel="canonical" href="{html.escape(web_url("privacy/"))}"><link rel="icon" href="{html.escape(web_url("favicon.svg"))}" type="image/svg+xml"></head>')
+    write_web_assets()
     (SITE / "privacy").mkdir(exist_ok=True); (SITE / "privacy" / "index.html").write_text(privacy, encoding="utf-8")
     months = sorted({d[:7] for d in days}, reverse=True)
     urls = [web_url()] + [web_url(d + '/') for d in days] + [web_url('archive/' + m + '/') for m in months] + [web_url('about/'), web_url('privacy/')]
@@ -929,6 +944,10 @@ def write_site_files(days):
     (SITE / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
     host = SITE_URL.split("//", 1)[1].split("/", 1)[0]
     if not host.endswith("github.io"): (SITE / "CNAME").write_text(host + "\n", encoding="utf-8")
+
+
+def write_web_assets():
+    shutil.copyfile(Path(__file__).parent / 'assets' / 'favicon.svg', SITE / 'favicon.svg')
 
 
 def backfill(n):
@@ -955,11 +974,14 @@ def backfill(n):
             "head": headline(f, opened, status, source_states), "sentence": sentence(f, source_states) if f and f["n"] else None,
             "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
             "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}
-        # Backfill repairs changed publications; HTML regeneration never touches PNGs.
+        # 기존 relay.png는 내용이 바뀔 때만 갱신하고, 공유 이미지는 누락 시에도 만든다.
         changed = any(saved.get(key) != payload[key] for key in ("status", "open", "close", "us", "freq", "head", "kr", "sentence", "source_note"))
         if changed or not (day / "relay.png").exists():
             screenshot_card(share_card_page(D, prev, us, vix_lv, opened, f, status, None, None,
                                            source_note=source_note, source_states=source_states), day / "relay.png")
+        if changed or not (day / "og.png").exists():
+            screenshot_card(share_card_page(D, prev, us, vix_lv, opened, f, status, None, None,
+                                           source_note=source_note, source_states=source_states, landscape=True), day / "og.png")
         (SITE / "days").mkdir(exist_ok=True)
         archive.write_text(json.dumps(payload, ensure_ascii=False, default=float, allow_nan=False), encoding="utf-8")
     write_index()
@@ -979,7 +1001,7 @@ def screenshot_card(markup, png):
 def screenshot(html_path, png):
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
-        b = p.chromium.launch(); pg = b.new_page(viewport={"width": 540, "height": 675}, device_scale_factor=2)
+        b = p.chromium.launch(); pg = b.new_page(viewport={"width": 600 if 'class="og-card"' in html_path.read_text(encoding="utf-8") else 540, "height": 675}, device_scale_factor=2)
         pg.goto(html_path.resolve().as_uri(), wait_until="networkidle")
         pg.evaluate("document.fonts.ready"); pg.wait_for_timeout(300)
         pg.locator(".sheet").screenshot(path=str(png)); b.close()

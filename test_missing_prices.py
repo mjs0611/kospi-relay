@@ -253,7 +253,8 @@ def check_restore_same_day():
                 assert "KOSPI 2026-09-21 missing upstream; restored from published open/close" in output.getvalue()
                 assert (Path(tmp) / "days/2026-09-22.json").read_bytes() == latest.read_bytes()
                 assert json.loads(archive.read_text()) == published
-                render.assert_called_once()
+                assert {call.args[1].relative_to(tmp).as_posix() for call in render.call_args_list} == {
+                    "relay.png", "2026-09-22/og.png", "2026-09-21/og.png"}
     print("same-day restore ok")
 
 
