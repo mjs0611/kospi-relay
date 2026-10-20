@@ -101,6 +101,43 @@ class Clock(r.dt.datetime):
         return cls(2026, 10, 19, 16, tzinfo=r.KST)
 
 
+class BandTests(unittest.TestCase):
+    """kospi-threshold.md: 보이는 반올림 값 기준, ±0.3% 이내(경계 포함) 거의 그대로, 시가·마감 같은 구간."""
+
+    def test_flat_is_inclusive_on_displayed_value(self):
+        self.assertEqual(r.FLAT, 0.003)
+        for x in (0.0, 0.002, 0.003, -0.003, 0.00304, -0.00304):   # 0.304% shows as 0.30%
+            self.assertEqual(r.zone_of(x), 'flat', x)
+            self.assertEqual(r.color(x), 'var(--flat)', x)
+            self.assertIsNone(r.band_of(x), x)
+        self.assertEqual(r.pct(0.00306), '+0.31%')
+        self.assertEqual(r.zone_of(0.00306), 'up')      # shows +0.31%
+        self.assertEqual(r.zone_of(-0.0031), 'down')
+        self.assertEqual(r.color(0.0031), 'var(--up)')
+        self.assertEqual(r.color(-0.0031), 'var(--down)')
+
+    def test_plus_point_two_is_gray_and_flat_worded(self):
+        self.assertEqual(r.color(0.002), 'var(--flat)')
+        self.assertEqual(r.web_words(0.002, '마감'), '0.20% 올라 거의 그대로 마감했어요')
+        self.assertEqual(r.web_words(-0.003, '시작'), '0.30% 내려 거의 그대로 시작했어요')
+        self.assertEqual(r.web_words(0.0, '마감'), '어제 마감과 같게 마감했어요')
+
+    def test_magnitude_band_boundaries_both_signs(self):
+        cases = [(0.0031, '조금'), (0.00994, '조금'), (0.009949, '조금'), (0.00996, '꽤'), (0.01, '꽤'),
+                 (0.0199, '꽤'), (0.02, '많이'), (0.0499, '많이'), (0.04996, '아주 크게'), (0.05, '아주 크게'), (0.1791, '아주 크게')]
+        for x, word in cases:
+            for sign in (1, -1):
+                with self.subTest(x=x * sign):
+                    self.assertEqual(r.band_of(x * sign), word)
+        for x in (0.00996, 0.04996, 0.0199, 0.00306):   # band follows the printed number
+            self.assertEqual(r.pct(x)[1:5], f'{r.shown_pct(x):.2f}')
+        self.assertEqual(r.web_words(0.006, '시작'), '0.60% 조금 올라서 시작했어요')
+        self.assertEqual(r.web_words(-0.0397, '마감'), '3.97% 많이 내려서 마감했어요')
+        self.assertEqual(r.web_words(-0.01, '시작'), '1.00% 꽤 내려서 시작했어요')
+        self.assertEqual(r.web_words(0.05, '마감'), '5.00% 아주 크게 올라서 마감했어요')
+        self.assertEqual(r.web_words(0.0031, '마감'), '0.31% 조금 올라서 마감했어요')
+
+
 class WebTests(unittest.TestCase):
     def restyle_fixture(self):
         source = '<!doctype html><html lang="ko"><head><title>기존 기록</title><style>old</style></head><body><div class="wrap"><header class="site-header">밤사이 코스피</header><main><h1>기록</h1><p>수치는 +1.23% · 자료 대기</p><table class="comparison-table"><thead><tr><th>날짜</th><th>시가</th></tr></thead><tbody><tr><th>09/23</th><td>+1.23%</td></tr></tbody></table></main></div></body></html>'

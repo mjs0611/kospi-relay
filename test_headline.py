@@ -5,7 +5,7 @@ import ast, pathlib, html, json, datetime, subprocess
 src = pathlib.Path(__file__).with_name("relay.py").read_text()
 tree = ast.parse(src)
 keep = {"FLAT", "US", "LABEL", "NIGHT", "WENT", "LABEL_Z", "tenths", "pct", "color", "zone_of", "headline", "head_html", "sentence", "ny_svg", "kr_svg", "tail_text"}
-keep.update({"share_card_page", "pending_text"})
+keep.update({"share_card_page", "pending_text", "shown_pct", "is_flat", "band_of", "BANDS"})
 mod = ast.Module(body=[n for n in tree.body
                        if (isinstance(n, ast.FunctionDef) and n.name in keep)
                        or (isinstance(n, ast.Assign) and any(getattr(t, "id", None) in keep for t in n.targets))], type_ignores=[])
@@ -25,7 +25,7 @@ assert headline(fu, None, "pending", {"SPY": "reused"})["cond"] == "이전에 �
 assert sentence(fu, {"SPY": "reused"}).startswith("이전에 확인한 뉴욕 자료예요.")
 assert headline(fu, None, "pending", {"SPY": "fresh"}) == headline(fu, None, "pending")
 assert "올라서" in sentence(fu)                                  # relay.py selfcheck와 같은 계약
-assert zone_of(FLAT) == "flat" and zone_of(FLAT + 1e-9) == "up" and zone_of(-FLAT - 1e-9) == "down"
+assert zone_of(FLAT) == "flat" and zone_of(FLAT + 1e-9) == "flat" and zone_of(0.0031) == "up" and zone_of(-0.0031) == "down"  # 보이는 반올림 값 기준(+0.30%는 거의 그대로)
 for s_ in (sentence(f), sentence(fu), h["cond"]):
     assert "—" not in s_ and "·" not in s_ and "습니다" not in s_ and "열렸다" not in s_, s_   # 줄표·중점·합쇼체·신문체 금지
 ny = ny_svg(us); assert ny.count("<rect") == 3 and "+3.52%" in ny and "-0.39%" in ny and "mono" not in ny, ny[:200]
