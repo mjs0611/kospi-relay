@@ -2,6 +2,7 @@
 import contextlib
 import io
 import json
+import re
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -946,6 +947,23 @@ class WebTests(unittest.TestCase):
         self.assertEqual(preserved['status'], 'done')
         self.assertIsNone(preserved['open'])
         self.assertEqual(preserved['close'], result['close'])
+
+
+
+class ShareCardTests(unittest.TestCase):
+    """공유 카드(relay.png·og.png 원본)는 밤사이 / 아침 시작 / 오후 마감 말로 써요. 줄표 자리표시 없음."""
+    def test_card_labels_use_new_wording(self):
+        D = r.pd.Timestamp('2026-10-21')
+        for status, opened in (('pending', None), ('filled', 0.0205), ('done', 0.0205), ('closed', None)):
+            for landscape in (False, True):
+                page = r.share_card_page(D, None, {}, None, opened, None, status, None, landscape=landscape)
+                visible = re.sub(r'<(script|style)[^>]*>.*?</\1>', '', page, flags=re.S)
+                visible = re.sub(r'<[^>]+>', ' ', visible)
+                for stale in ('뉴욕 지표', '코스피 시가', '오늘 시가', '시가 반영', '—'):
+                    self.assertNotIn(stale, visible, (status, landscape, stale))
+                self.assertIn('밤사이 미국 증시', visible)
+                self.assertIn('다음 날 코스피 아침 시작', visible)
+        self.assertEqual(r.pct(None), '자료 없음')
 
 
 if __name__ == '__main__':
