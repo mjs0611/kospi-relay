@@ -361,7 +361,7 @@ WEB_CSS = """
 a{color:inherit;text-underline-offset:4px}button{font:inherit;color:inherit}a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 .wrap{max-width:1120px;margin:auto}.site-header{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:80px;border-bottom:1px solid var(--rule)}
 .brand{font-size:1.26667rem;font-weight:800;text-decoration:none}.site-header nav{display:flex;gap:24px;font-size:0.933333rem}
-.page-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:28px 0}h1{font-size:1.86667rem;letter-spacing:-.04em;margin:0}h2{font-size:1.26667rem;letter-spacing:-.025em;margin:0 0 20px}h3{font-size:1.06667rem;margin:28px 0 8px}p{margin:12px 0}
+.page-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:28px 0}.page-heading .lead{margin:10px 0 0;font-size:1.2rem;font-weight:650;letter-spacing:-.02em}h1{font-size:1.86667rem;letter-spacing:-.04em;margin:0}h2{font-size:1.26667rem;letter-spacing:-.025em;margin:0 0 20px}h3{font-size:1.06667rem;margin:28px 0 8px}p{margin:12px 0}
 .day-nav{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:0.933333rem;margin:0 0 24px}.day-nav a{white-space:nowrap}
 .answer-band{display:grid;grid-template-columns:320px minmax(0,1fr);gap:40px;padding:8px 0 36px}.kospi-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px}
 .ny-area,.frequency-area,.result-area{min-width:0}.ny-area{padding-right:28px;border-right:1px solid var(--rule)}.graphic-row{margin:0 0 16px}.row-label{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:0.933333rem}.row-label strong{font-size:1.26667rem;font-weight:650}.ticker{font-size:.875rem;margin-left:6px}.source-state{display:block;font-size:.875rem;margin-top:3px}.source-state:empty{display:none}
@@ -745,6 +745,17 @@ def web_frequency_graph(f, latest, no_session=False):
     return f'<section class="frequency-area" aria-labelledby="frequency-title" data-sample-count="{n}"><h2 id="frequency-title">비슷했던 밤 다음 날, 코스피는 어떻게 시작했을까요?</h2>{content}</section>'
 
 
+def web_answer(record, latest):
+    """그날의 답 한 문장. 제목 바로 아래(lead)와 '이날 코스피' 칸이 같은 문장을 써요."""
+    opened = record.get("open")
+    closed = record.get("close") if record.get("status") == "done" else None
+    if closed is not None:
+        return f'코스피는 {web_words(closed, "마감")}'
+    if opened is not None:
+        return f'코스피는 {web_words(opened, "시작")}'
+    return "코스피는 9시에 시작해요. 시작하면 여기에 보여요." if latest else "이날은 관측한 코스피 기록이 없어요"
+
+
 def web_result(record, latest):
     opened = record.get("open")
     closed = record.get("close") if record.get("status") == "done" else None
@@ -755,12 +766,7 @@ def web_result(record, latest):
         label = f'<strong>{pct(value)}</strong>' if value is not None else f'<strong class="pending-value">{waiting}</strong>'
         mark = f'<i class="result-mark {kind}" style="left:{50 + value / scale * 50:.3f}%;background:{color(value)}"></i>' if value is not None else ""
         rows.append(f'<div class="result-row" data-observed="{str(value is not None).lower()}"><div class="row-label"><span>{name}</span>{label}</div><div class="result-track" aria-hidden="true">{mark}</div></div>')
-    if closed is not None:
-        answer = f'코스피는 {web_words(closed, "마감")}'
-    elif opened is not None:
-        answer = f'코스피는 {web_words(opened, "시작")}'
-    else:
-        answer = "코스피는 9시에 시작해요. 시작하면 여기에 보여요." if latest else "이날은 관측한 코스피 기록이 없어요"
+    answer = web_answer(record, latest)
     return f'<section class="result-area" aria-labelledby="result-title"><h2 id="result-title">이날 코스피</h2><p class="result-basis">어제 마감보다</p><div class="result-axis"><span>{-scale:.1%}</span><span>0%</span><span>+{scale:.1%}</span></div>{"".join(rows)}<p class="answer">{answer}</p></section>'
 
 
@@ -824,7 +830,7 @@ def web_day(record, records, hist, home=False):
         links.append(f'<a href="{html.escape(web_url())}">최신 기록 보기</a>')
     title = f'{date} 코스피 기록'
     weekday = WEEKDAYS[dt.date.fromisoformat(date).weekday()]
-    heading = f'<div class="page-heading"><div><h1>어젯밤 미국 증시와 코스피</h1><p class="date-line"><time datetime="{date}">{korean_date(date)}({weekday})</time> 기록</p></div><button class="share" type="button" hidden>공유</button></div>'
+    heading = f'<div class="page-heading"><div><h1>어젯밤 미국 증시와 코스피</h1><p class="lead">{web_answer(record, latest)}</p><p class="date-line"><time datetime="{date}">{korean_date(date)}({weekday})</time> 기록</p></div><button class="share" type="button" hidden>공유</button></div>'
     nav = '<nav class="day-nav" aria-label="날짜별 기록">' + ''.join(links) + '</nav>'
     f = web_frequency(record, hist)
     band = '<div class="answer-band">' + web_ny(record, latest) + '<div class="kospi-side">' + web_frequency_graph(f, latest, no_us_session(record)) + web_result(record, latest) + '</div></div>'
