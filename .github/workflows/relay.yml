@@ -19,12 +19,13 @@ on:
         default: morning
       date: { description: "YYYY-MM-DD (재현용, 비우면 오늘)", type: string, default: "" }
       days: { description: "backfill 거래일 수", type: string, default: "20" }
-permissions: { contents: write }
+permissions: {}
 concurrency: relay
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions: { contents: write }   # gh-pages에 days/*.json·latest.json을 쌓는다. 다음 실행이 여기서 복원한다.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -33,7 +34,7 @@ jobs:
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt && playwright install --with-deps chromium
       - run: python test_missing_prices.py && python test_headline.py && python test_signal_evaluation.py && python test_web.py
-      - run: rm -rf site/.git && python relay.py "$PHASE" "${DAYS:-20}"
+      - run: python relay.py "$PHASE" "${DAYS:-20}"
         env:
           PHASE: ${{ inputs.phase || 'morning' }}
           RELAY_DATE: ${{ github.event.inputs.date }}
@@ -41,8 +42,27 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL || 'https://mjs0611.github.io/kospi-relay' }}
           ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
           ADSENSE_SLOT: ${{ vars.ADSENSE_SLOT }}
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          keep_files: true
+      - name: Persist data and pages to gh-pages
+        run: |
+          git -C site add --all
+          if git -C site diff --cached --quiet; then echo 'No changes; no commit.'; exit 0; fi
+          git -C site config user.name 'github-actions[bot]'
+          git -C site config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C site commit -m "relay: $PHASE $GITHUB_SHA"
+          git -C site push origin HEAD:refs/heads/gh-pages
+        env:
+          PHASE: ${{ inputs.phase || 'morning' }}
+      # 변경이 없어도 올린다. 재시도 실행이 실패한 Pages 배포를 복구한다.
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: { pages: write, id-token: write, contents: read }
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -20,9 +20,19 @@ LABEL = {"SOXX": "반도체", "QQQ": "나스닥100", "SPY": "S&P500"}
 FLAT = 0.003          # 시가 갭 ±0.3% = 보합
 BINS = [(-9, -0.005, "강한 하락"), (-0.005, -0.003, "하락"), (-0.003, 0.003, "보합"), (0.003, 0.005, "상승"), (0.005, 9, "강한 상승")]
 SITE_URL = os.environ.get("SITE_URL", "https://mjs0611.github.io/kospi-relay")
+assert re.fullmatch(r"https://[a-z0-9.-]+(/[\w-]+)*", SITE_URL), SITE_URL
 ADSENSE_SLOT = os.environ.get("ADSENSE_SLOT", "")
 ADSENSE = os.environ.get("ADSENSE_CLIENT", "")  # ca-pub-… 저장소 변수. 비면 광고 스크립트 없음
 WEB_ANALYTICS = '<script defer src="https://ditoaxis.com/m.js"></script>'
+CSP = ('<meta http-equiv="Content-Security-Policy" content="'
+       "default-src 'self'; "
+       "script-src 'self' 'unsafe-inline' https://ditoaxis.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; "
+       "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+       "font-src 'self' https://cdn.jsdelivr.net; "
+       "img-src 'self' data: https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; "
+       "connect-src 'self' https://cloudflareinsights.com https://*.cloudflareinsights.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google https://www.google.com; "
+       "frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; "
+       "object-src 'none'; base-uri 'self'; form-action 'self'\">")
 WEB_ANALYTICS_NOTICE = """<h2>방문 통계</h2>
 <p><a href="https://www.cloudflare.com/web-analytics/">Cloudflare Web Analytics</a>로 방문 통계(페이지 주소, 유입 경로, 브라우저·기기 종류, 국가, 로딩 성능)를 수집합니다. 쿠키나 기기 식별자를 사용하지 않으며, 개인을 알아볼 수 없는 집계로만 확인합니다.</p>
 """
@@ -696,7 +706,7 @@ shareButton.addEventListener('click', async function () {{
 }});
 </script>"""
     ad_head = f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={e(ADSENSE)}" crossorigin="anonymous"></script>' if ADSENSE else ""
-    return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    return f'''<!doctype html><html lang="ko"><head>{CSP}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{e(title)} | 밤사이 코스피</title><meta name="description" content="{e(description)}">{robots_meta}
 <link rel="canonical" href="{e(url)}"><meta property="og:url" content="{e(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(description)}">{image_meta}{ad_head}
 {WEB_ANALYTICS}
@@ -967,6 +977,8 @@ def restyle():
         icon = f'<link rel="icon" href="{html.escape(web_url("favicon.svg"))}" type="image/svg+xml">'
         if icon not in text:
             text = re.sub(r'</head\s*>', lambda _: icon + '\n</head>', text, count=1, flags=re.I)
+        if CSP not in text:
+            text = re.sub(r'<head\b[^>]*>', lambda m: m[0] + CSP, text, count=1, flags=re.I)
         if page == SITE / 'privacy' / 'index.html' and 'https://www.cloudflare.com/web-analytics/' not in text:
             if '<h2>문의</h2>' not in text:
                 raise RuntimeError('Published privacy template is unknown; refusing partial update')
@@ -1236,7 +1248,7 @@ def write_index():
     (SITE / "index.json").write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
 
 
-PRIVACY = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+PRIVACY = """<!doctype html><html lang="ko"><head>""" + CSP + """<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 """ + WEB_ANALYTICS + """
 <title>개인정보처리방침 · 밤사이 코스피</title><style>body{font:15px/1.7 -apple-system,"Apple SD Gothic Neo",sans-serif;max-width:640px;margin:0 auto;padding:24px 16px;color:#191F28;background:#FFF}h1{font-size:20px}h2{font-size:16px;margin-top:28px}</style></head><body>
 <h1>개인정보처리방침</h1>
