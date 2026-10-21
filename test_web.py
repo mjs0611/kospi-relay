@@ -241,6 +241,24 @@ class WebTests(unittest.TestCase):
         for name in ('favicon.svg',):
             self.assertEqual((self.site / name).read_bytes(), (Path(r.__file__).parent / 'assets' / name).read_bytes())
 
+    def test_restyle_rewrites_old_head_wording_without_touching_main(self):
+        source = self.restyle_fixture()
+        old = ('<meta name="description" content="2026-09-23 뉴욕 세 지표와 비슷한 밤의 과거 빈도, 코스피 시가와 종가를 함께 봐요">'
+               '<meta property="og:description" content="2026-09-23 뉴욕 세 지표와 비슷한 밤의 과거 빈도, 코스피 시가와 종가를 함께 봐요">'
+               '<meta property="og:image:alt" content="2026-09-23 코스피 기록 · 밤사이 뉴욕 지표와 코스피 시가">')
+        (self.site / 'index.html').write_text(source.replace('</head>', old + '</head>'))
+        r.restyle()
+        once = (self.site / 'index.html').read_text()
+        head = once.split('</head>')[0]
+        for stale in ('뉴욕 세 지표', '뉴욕 지표', '코스피 시가'):
+            self.assertNotIn(stale, head)
+        self.assertEqual(head.count(r.web_description('2026-09-23')), 2)
+        self.assertIn('2026-09-23 코스피 기록 · ' + r.WEB_IMAGE_ALT, head)
+        self.assertNotIn('오늘', head)
+        self.assertIn('수치는 +1.23% · 자료 대기', once)
+        r.restyle()
+        self.assertEqual((self.site / 'index.html').read_text(), once)
+
     def test_restyle_adds_analytics_to_all_html_once_and_preserves_ads_and_privacy(self):
         source = self.restyle_fixture()
         ad = '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-fixture" crossorigin="anonymous"></script>'
