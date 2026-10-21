@@ -311,7 +311,7 @@ def share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None
     head = headline(f, opened, status, source_states)
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>밤사이 코스피 · {D:%Y-%m-%d}</title>
-<meta name="description" content="전일 코스피 마감에서 밤사이 뉴욕을 거쳐 오늘 코스피 시가까지, 한 장.">
+<meta name="description" content="전날 코스피 마감, 밤사이 미국 증시, 다음 날 코스피 아침 시작을 한 장에 담았어요.">
 <link rel="canonical" href="{SITE_URL}/{D:%Y-%m-%d}/">
 <meta property="og:type" content="article"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:url" content="{SITE_URL}/{D:%Y-%m-%d}/">
 <meta property="og:title" content="{html.escape(head['cond'])}"><meta property="og:description" content="{html.escape(head['claim'] or '오늘 코스피 시가')}">
@@ -633,12 +633,26 @@ document.querySelectorAll('.table-scroll').forEach(region => {
 </script>"""
 
 
+WEB_IMAGE_ALT = '밤사이 미국 증시와 코스피 아침 시작, 오후 마감'
+
+
+def web_description(date):
+    return f'{date} 밤사이 미국 증시와 그다음 코스피 아침 시작, 오후 마감을 함께 봐요. 비슷했던 밤 다음 날 코스피가 어떻게 시작했는지 지난 기록으로 세어 봤어요'
+
+
+def refresh_meta(text):
+    """Old head wording (뉴욕 지표 / 시가) -> 밤사이 / 아침 시작 / 오후 마감. Head only; idempotent."""
+    text = re.sub(r'(\d{4}-\d{2}-\d{2}) 뉴욕 세 지표와 비슷한 밤의 과거 빈도, 코스피 시가와 종가를 함께 봐요',
+                  lambda m: html.escape(web_description(m[1])), text)
+    return text.replace(' · 밤사이 뉴욕 지표와 코스피 시가"', f' · {WEB_IMAGE_ALT}"')
+
+
 def web_shell(title, path, body, description=None, image_day=None, share_day=None, noindex=False):
     e = html.escape
     url = web_url(path)
     description = description or title
     robots_meta = '<meta name="robots" content="noindex">' if noindex else ''
-    image_meta = f'<meta property="og:image" content="{e(web_url(image_day + "/og.png"))}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="{e(title)} · 밤사이 뉴욕 지표와 코스피 시가"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{e(web_url(image_day + "/og.png"))}">' if image_day else ""
+    image_meta = f'<meta property="og:image" content="{e(web_url(image_day + "/og.png"))}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="{e(title)} · {e(WEB_IMAGE_ALT)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{e(web_url(image_day + "/og.png"))}">' if image_day else ""
     share_script = ""
     if share_day:
         # JSON encoding plus escaping '<' keeps published text out of script markup.
@@ -819,7 +833,7 @@ def web_day(record, records, hist, home=False):
     if ADSENSE and ADSENSE_SLOT and has_kospi_data(record):
         ad = f'<aside class="ad-slot" aria-label="광고"><div>광고</div><ins class="adsbygoogle" data-ad-client="{html.escape(ADSENSE)}" data-ad-slot="{html.escape(ADSENSE_SLOT)}" data-ad-format="horizontal" data-full-width-responsive="true"></ins></aside><script>(window.adsbygoogle = window.adsbygoogle || []).push({{}});</script>'
     return web_shell(title, "" if home else date + "/", heading + nav + band + table + ad,
-                     description=f'{date} 뉴욕 세 지표와 비슷한 밤의 과거 빈도, 코스피 시가와 종가를 함께 봐요', image_day=date, share_day=date)
+                     description=web_description(date), image_day=date, share_day=date)
 
 
 def web_archive(month, records, months):
@@ -907,6 +921,8 @@ def restyle():
     for page in sorted(SITE.rglob('*.html')):
         source = page.read_text(encoding='utf-8')
         text = add_web_analytics(source)
+        if text is not None:
+            text = refresh_meta(text)
         if text is None:
             if page in (SITE / 'index.html', SITE / 'privacy' / 'index.html') or '<header class="site-header">' in source:
                 raise RuntimeError(f'Missing published head in {page.relative_to(SITE)}; refusing partial update')
