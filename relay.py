@@ -528,9 +528,9 @@ body{overflow-wrap:anywhere}.row-label{flex-wrap:wrap;gap:4px 12px}
 .dx-footer__brand { display: inline-flex; align-items: center; gap: 6px; min-height: var(--dx-tap);
   color: var(--dx-ink); text-decoration: none; font-weight: 800; letter-spacing: -.04em; font-size: var(--dx-text-md); }
 .dx-footer__brand svg { width: 16px; height: 16px; }
-.dx-footer__op { margin: var(--dx-space-1) 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; align-items: center; }
+.dx-footer__op { margin: var(--dx-space-1) 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; }
 .dx-footer__op li { display: inline-flex; align-items: center; }
-.dx-footer__op li:not(:last-child)::after { content: "·"; margin: 0 8px; color: var(--dx-muted); } /* 줄바꿈 때 점이 줄 끝에 남아 새 줄이 점으로 시작하지 않아요 */
+/* 구분점(·) 없이 간격으로만 나눠요. 모바일에서 줄이 바뀌어도 줄 끝에 점이 남지 않아요 */
 .dx-footer__op a, .dx-footer__links a {
   display: inline-flex; align-items: center; min-height: var(--dx-tap);
   color: var(--dx-ink-2); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px;
