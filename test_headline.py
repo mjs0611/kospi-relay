@@ -18,7 +18,7 @@ us = {"SOXX": (0.01, 0.0352, 1), "QQQ": (0.0, 0.0018, 1), "SPY": (0.0, -0.0039, 
 h = headline(fu, None, "pending");  assert h == {"cond": "지난밤 뉴욕이 크게 올랐어요", "claim": "코스피는 10번 중 8번 올라서 시작했어요", "zone": "up"}, h
 h = headline(f, 0.0276, "filled");  assert h["cond"] == "지난밤 뉴욕은 잠잠했어요" and h["claim"] == "코스피는 10번 중 5번 거의 그대로 시작했어요", h
 h = headline({"n": 10, "up": 5, "flat": 3, "down": 2, "bin": "상승", "years": 5.6}, None, "pending"); assert h["claim"] == "비슷한 밤이 10번뿐이라 통계는 안 냈어요", h
-h = headline(None, None, "pending"); assert h["cond"] == "비교할 뉴욕 자료가 없어요" and "오늘 시가만" in h["claim"]
+h = headline(None, None, "pending"); assert h["cond"] == "비교할 뉴욕 자료가 없어요" and "오늘 아침 시작만" in h["claim"]
 h = headline(None, 0.0072, "done"); assert h["claim"] == "코스피는 +0.72%로 시작했어요" and h["zone"] == "up"
 assert sentence(fu) == "지난밤 뉴욕이 크게 올랐어요. 코스피는 10번 중 8번 올라서 시작했어요"
 assert headline(fu, None, "pending", {"SPY": "reused"})["cond"] == "이전에 확인한 뉴욕 자료예요"
@@ -66,7 +66,7 @@ const vm = require('node:vm');
       });
       await click.call(button);
       const fallback = !['success', 'AbortError'].includes(outcome);
-      assert.equal(copied, fallback ? '비교할 뉴욕 자료가 없어요. 비교할 밤이 없어요. 오늘 시가만 볼게요\nhttps://example.com/2026-09-25/' : undefined, outcome);
+      assert.equal(copied, fallback ? '비교할 뉴욕 자료가 없어요. 비교할 밤이 없어요. 오늘 아침 시작만 볼게요\nhttps://example.com/2026-09-25/' : undefined, outcome);
       assert.equal(button.textContent, fallback && !copyFails ? '링크 복사됨' : '공유', outcome);
       assert.equal(location.href, fallback && copyFails ? 'https://example.com/2026-09-25/' : 'unchanged', outcome);
       assert.equal(!!shared, outcome !== 'missing', outcome);

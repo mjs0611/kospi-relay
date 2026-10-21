@@ -171,7 +171,7 @@ def headline(f, opened, status, source_states=None):
         claim = f"코스피는 {pct(opened)}로 시작했어요" if opened is not None and status != "pending" else "자료가 채워지면 통계를 보여드릴게요"
         return {"cond": "뉴욕 자료를 기다리고 있어요", "claim": claim, "zone": zone_of(opened)}
     if not f:   # 거래일 캘린더가 없으므로 자료 부재만으로 휴장을 단정하지 않는다.
-        claim = f"코스피는 {pct(opened)}로 시작했어요" if opened is not None and status != "pending" else "비교할 밤이 없어요. 오늘 시가만 볼게요"
+        claim = f"코스피는 {pct(opened)}로 시작했어요" if opened is not None and status != "pending" else "비교할 밤이 없어요. 오늘 아침 시작만 볼게요"
         return {"cond": "비교할 뉴욕 자료가 없어요", "claim": claim, "zone": zone_of(opened)}
     cond = "이전에 확인한 뉴욕 자료예요" if 'reused' in (source_states or {}).values() else NIGHT[f["bin"]]
     if f["n"] < 30:
@@ -197,7 +197,7 @@ def tail_text(status, closed_pct, open_h):
 def head_html(h):
     """(밤 쪽 조건, 낮 쪽 규칙) 두 조각. 조건은 밤에, 규칙은 낮에 산다."""
     e = html.escape
-    return (f'<p class="cond">{e(h["cond"])}</p>', f'<p class="claim">{e(h["claim"] or "오늘 코스피 시가")}</p>')
+    return (f'<p class="cond">{e(h["cond"])}</p>', f'<p class="claim">{e(h["claim"] or "오늘 코스피 아침 시작")}</p>')
 
 
 def ny_svg(us):
@@ -236,9 +236,9 @@ def kr_svg(f, opened, status):
         o.append(f'<text x="0" y="40" fill="var(--muted)">{note}</text>')
         if opened is not None and status in ("filled", "done"):
             c = color(opened)
-            o.append(f'<text x="0" y="76"><tspan fill="var(--muted)">오늘 시가 </tspan><tspan font-weight="800" font-size="14" fill="{c}">{pct(opened)}</tspan></text>')
+            o.append(f'<text x="0" y="76"><tspan fill="var(--muted)">오늘 아침 시작 </tspan><tspan font-weight="800" font-size="14" fill="{c}">{pct(opened)}</tspan></text>')
         elif status == "pending":
-            o.append(f'<text x="0" y="76" fill="var(--muted)" font-size="11">오늘 시가는 9시 이후 자료가 오면 표시해요</text>')
+            o.append(f'<text x="0" y="76" fill="var(--muted)" font-size="11">아침 시작은 9시 이후 자료가 오면 표시해요</text>')
         o.append("</svg>"); return "\n".join(o)
     n = f["n"]; bx, bmax = 82, 120   # 막대 시작 x, 100% = 120px
     z_today = zone_of(opened) if status in ("filled", "done") and opened is not None else None
@@ -252,7 +252,7 @@ def kr_svg(f, opened, status):
         if z == z_today:
             o.append(f'<text x="{W}" y="{y + 4}" text-anchor="end" fill="var(--ink)"><tspan fill="var(--muted)">오늘 </tspan><tspan font-weight="800" font-size="14" fill="{c}">{pct(opened)}</tspan></text>')
     if z_today is None:
-        o.append(f'<text x="{W}" y="{H - 2}" text-anchor="end" fill="var(--muted)" font-size="11">{"오늘 시가는 9시 이후 자료가 오면 표시해요" if status == "pending" else "오늘은 휴장이에요"}</text>')
+        o.append(f'<text x="{W}" y="{H - 2}" text-anchor="end" fill="var(--muted)" font-size="11">{"아침 시작은 9시 이후 자료가 오면 표시해요" if status == "pending" else "오늘은 휴장이에요"}</text>')
     o.append("</svg>")
     return "\n".join(o)
 
@@ -278,7 +278,7 @@ def today_nodes(raw, D):
 
 # ---------- render ----------
 def pct(x, sign=True):
-    return ("—" if x is None else f"{x * 100:+.2f}%" if sign else f"{x * 100:.2f}%")
+    return ("자료 없음" if x is None else f"{x * 100:+.2f}%" if sign else f"{x * 100:.2f}%")
 
 
 def color(x):
@@ -305,7 +305,7 @@ def pending_text(status):
 
 def share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None, og_image=None, source_note=None, source_states=None, landscape=False):
     date_ko = f"{D.month}월 {D.day}일 {'월화수목금토일'[D.weekday()]}요일"
-    stamp_t = {"pending": "자료 대기", "done": "마감 반영"}.get(status, "시가 반영")
+    stamp_t = {"pending": "자료 대기", "done": "오후 마감 반영"}.get(status, "아침 시작 반영")
     pending = pending_text(status)
     ny, kr = ny_svg(us), kr_svg(f, opened, status)
     head = headline(f, opened, status, source_states)
@@ -314,7 +314,7 @@ def share_card_page(D, prev, us, vix_lv, opened, f, status, prev_link, tail=None
 <meta name="description" content="전날 코스피 마감, 밤사이 미국 증시, 다음 날 코스피 아침 시작을 한 장에 담았어요.">
 <link rel="canonical" href="{SITE_URL}/{D:%Y-%m-%d}/">
 <meta property="og:type" content="article"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:url" content="{SITE_URL}/{D:%Y-%m-%d}/">
-<meta property="og:title" content="{html.escape(head['cond'])}"><meta property="og:description" content="{html.escape(head['claim'] or '오늘 코스피 시가')}">
+<meta property="og:title" content="{html.escape(head['cond'])}"><meta property="og:description" content="{html.escape(head['claim'] or '오늘 코스피 아침 시작')}">
 <meta property="og:image" content="{og_image or f'{SITE_URL}/{D:%Y-%m-%d}/og.png'}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{og_image or f'{SITE_URL}/{D:%Y-%m-%d}/og.png'}">
 <link rel="icon" href="{SITE_URL.rstrip('/')}/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -340,8 +340,8 @@ footer a{{color:#1B64DA}}
 @media (max-width:480px){{.sheet{{grid-template-columns:1fr}}.cond{{margin-top:18px}}.claim{{margin-top:4px}}}}
 {'.og-card .sheet{width:600px;height:315px;grid-template-columns:230px 1fr;grid-template-rows:1fr auto;border-radius:0}.og-card .night,.og-card .day{padding:16px 20px;min-height:0}.og-card .cond,.og-card .claim{font-size:18px;line-height:1.35;margin:18px 0 0}.og-card .lab{margin:16px 0 6px}.og-card .night svg{height:76px}.og-card .day svg{height:86px}.og-card .cap{margin-top:6px}.og-card .tail,.og-card .provenance{display:none}.og-card footer{padding:10px 20px;font-size:9px}.og-card .share{display:none}' if landscape else ''}
 </style></head><body{' class="og-card"' if landscape else ''}><div class="sheet">
-<section class="night"><p class="brand">밤사이 코스피</p>{head_html(head)[0]}<p class="lab">뉴욕 지표</p>{ny}</section>
-<section class="day"><p class="stamp">{date_ko} <b>{stamp_t}</b></p>{head_html(head)[1]}<p class="lab">다음 날 코스피 시가</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}{f'<p class="tail">{html.escape(tail)}</p>' if tail else ''}{f'<p class="cap provenance">{html.escape(source_note)}</p>' if source_note else ''}</section>
+<section class="night"><p class="brand">밤사이 코스피</p>{head_html(head)[0]}<p class="lab">밤사이 미국 증시</p>{ny}</section>
+<section class="day"><p class="stamp">{date_ko} <b>{stamp_t}</b></p>{head_html(head)[1]}<p class="lab">다음 날 코스피 아침 시작</p>{kr}{f'<p class="cap">2021년부터 비슷한 밤 {f["n"]}번</p>' if f and f["n"] >= 30 else ''}{f'<p class="tail">{html.escape(tail)}</p>' if tail else ''}{f'<p class="cap provenance">{html.escape(source_note)}</p>' if source_note else ''}</section>
 <footer><span>정보 제공용, 투자 판단 자료 아님 · <a href="../privacy/">개인정보처리방침</a></span><span style="white-space:nowrap">{f'<a href="../{prev_link}/">지난 밤 {int(prev_link[5:7])}/{int(prev_link[8:10])}</a> ' if prev_link else ''}<button class="share" type="button">공유</button></span></footer>
 <script>
 /* 공유: Web Share가 있으면 시스템 공유 시트, 없으면 링크 복사. 링크는 이 날짜 페이지(OG 카드 붙음) */
