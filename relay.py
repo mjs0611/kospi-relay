@@ -48,7 +48,7 @@ def fetch():
                 if h.iloc[-1].notna().all():
                     break
                 print(f"{t}: incomplete latest prices ({attempt}/3)")
-            except Exception as exc:  # 외부 응답 경계. 마지막 실패는 배포를 막아 기존 자료를 보존한다.
+            except Exception as exc:  # 외부 응답 경계. 사용 가능한 이력이 한 번도 없을 때만 아래에서 중단한다.
                 print(f"{t}: fetch {attempt}/3 failed: {exc}")
         if last is None:
             raise RuntimeError(f"no usable history for {t} after 3 attempts")
