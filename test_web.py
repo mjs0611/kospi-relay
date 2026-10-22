@@ -194,12 +194,61 @@ class WebTests(unittest.TestCase):
                     self.assert_web_analytics(doc)
                     self.assertEqual(source.count('<script defer src="https://ditoaxis.com/m.js"></script>'), 1)
                     if client and page.parent.name != 'privacy':
-                        scripts = doc.find('head')[0].find('script')
+                        head_scripts = doc.find('head')[0].find('script')
+                        # Only the JSON-LD data block may be inline; any other inline script is a regression.
+                        self.assertEqual([n.attrs.get('type') for n in head_scripts if 'src' not in n.attrs], ['application/ld+json'])
+                        scripts = [n for n in head_scripts if 'src' in n.attrs]
                         self.assertEqual(len(scripts), 2)
                         self.assertIn('pagead2.googlesyndication.com', scripts[0].attrs['src'])
                         self.assertEqual(scripts[1].attrs['src'], 'https://ditoaxis.com/m.js')
         self.fetch.assert_not_called()
         self.assertEqual(len(self.captures), 2)
+
+    def test_every_generated_page_has_one_schema_org_json_ld_in_head(self):
+        self.write(legacy_record('2026-09-23'))
+        self.write(legacy_record('2026-10-12'))
+        orphan = self.site / '2026-10-13'
+        orphan.mkdir()
+        (orphan / 'index.html').write_text('<div>old orphan page</div>')
+        r.regenerate(self.hist)
+        home = r.web_url()
+        pages = sorted(self.site.rglob('*.html'))
+        self.assertEqual(len(pages), 8)
+        for page in pages:
+            route = page.parent.relative_to(self.site).as_posix()
+            route = '' if route == '.' else route + '/'
+            with self.subTest(page=route or 'home'):
+                doc = Document(page.read_text(encoding='utf-8'))
+                blocks = [n for n in doc.find('script') if n.attrs.get('type') == 'application/ld+json']
+                self.assertEqual(len(blocks), 1)
+                self.assertIn(blocks[0], doc.find('head')[0].find('script'))
+                data = json.loads(blocks[0].text)
+                self.assertEqual(data['@context'], 'https://schema.org')
+                nodes = {node['@type']: node for node in data.get('@graph', [data])}
+                metas = [n.attrs['content'] for n in doc.find('meta') if n.attrs.get('name') == 'description']
+                if not route:
+                    app = nodes['WebApplication']
+                    self.assertEqual((app['name'], app['url'], app['description']), ('밤사이 코스피', home, metas[0]))
+                    self.assertEqual((app['applicationCategory'], app['operatingSystem'], app['inLanguage'], app['isAccessibleForFree']),
+                                     ('FinanceApplication', 'Web', 'ko', True))
+                    self.assertEqual((app['offers']['price'], app['offers']['priceCurrency']), ('0', 'KRW'))
+                    self.assertEqual(app['publisher'], {'@type': 'Organization', 'name': '디토엑시스', 'url': 'https://ditoaxis.com/'})
+                    self.assertEqual(nodes['WebSite']['url'], home)
+                    continue
+                webpage = nodes['WebPage']
+                self.assertEqual((webpage['url'], webpage['inLanguage'], webpage['isPartOf']['url']), (r.web_url(route), 'ko', home))
+                self.assertEqual(webpage.get('description'), metas[0] if metas else None)
+                self.assertNotIn('datePublished', webpage)
+                if route.startswith('archive/') or route in ('2026-09-23/', '2026-10-12/'):
+                    crumbs = nodes['BreadcrumbList']['itemListElement']
+                    self.assertEqual(crumbs[0]['item'], home)
+                    self.assertEqual(crumbs[-1]['item'], r.web_url(route))
+                    self.assertEqual([c['position'] for c in crumbs], list(range(1, len(crumbs) + 1)))
+                    if not route.startswith('archive/'):
+                        self.assertTrue((self.site / crumbs[1]['item'][len(home):] / 'index.html').is_file())
+                else:
+                    self.assertEqual(set(nodes), {'WebPage'})
+        self.fetch.assert_not_called()
 
     def test_privacy_explains_cookie_free_aggregate_analytics(self):
         r.regenerate(self.hist)

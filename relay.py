@@ -647,6 +647,35 @@ def refresh_meta(text):
     return text.replace(' · 밤사이 뉴욕 지표와 코스피 시가"', f' · {WEB_IMAGE_ALT}"')
 
 
+def web_structured_data(title, path, description, noindex=False):
+    """One schema.org JSON-LD block from values the page already shows."""
+    home = web_url()
+    site = {"@type": "WebSite", "@id": home + "#website", "name": "밤사이 코스피", "url": home, "inLanguage": "ko"}
+    if path == "":
+        publisher = {"@type": "Organization", "name": "디토엑시스", "url": "https://ditoaxis.com/"}
+        data = {"@context": "https://schema.org", "@graph": [
+            {"@type": "WebApplication", "name": "밤사이 코스피", "url": home, "description": description,
+             "applicationCategory": "FinanceApplication", "operatingSystem": "Web", "inLanguage": "ko",
+             "isAccessibleForFree": True, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"},
+             "publisher": publisher},
+            {**site, "publisher": publisher}]}
+    else:
+        url = web_url(path)
+        page = {"@type": "WebPage", "name": title, "url": url, **({"description": description} if description else {}),
+                "inLanguage": "ko", "isPartOf": site}
+        crumbs = [("밤사이 코스피", home)]
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}/", path):
+            crumbs.append((f"{path[:7]} 코스피 기록", web_url("archive/" + path[:7] + "/")))  # web_archive title
+        if not noindex and (path.startswith("archive/") or len(crumbs) > 1):
+            crumbs.append((title, url))
+            data = {"@context": "https://schema.org", "@graph": [page, {"@type": "BreadcrumbList", "itemListElement": [
+                {"@type": "ListItem", "position": i, "name": name, "item": item} for i, (name, item) in enumerate(crumbs, 1)]}]}
+        else:
+            data = {"@context": "https://schema.org", **page}
+    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+    return f'<script type="application/ld+json">{payload}</script>'
+
+
 def web_shell(title, path, body, description=None, image_day=None, share_day=None, noindex=False):
     e = html.escape
     url = web_url(path)
@@ -671,6 +700,7 @@ shareButton.addEventListener('click', async function () {{
 <title>{e(title)} | 밤사이 코스피</title><meta name="description" content="{e(description)}">{robots_meta}
 <link rel="canonical" href="{e(url)}"><meta property="og:url" content="{e(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(description)}">{image_meta}{ad_head}
 {WEB_ANALYTICS}
+{web_structured_data(title, path, description, noindex)}
 <link rel="icon" href="{e(web_url('favicon.svg'))}" type="image/svg+xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -1222,7 +1252,8 @@ PRIVACY = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta na
 
 def write_site_files(days):
     """검색·광고 심사용 정적 파일. SITE_URL이 github.io가 아니면 CNAME도 쓴다(Pages 커스텀 도메인)."""
-    privacy = PRIVACY.replace('</head>', f'<link rel="canonical" href="{html.escape(web_url("privacy/"))}"><link rel="icon" href="{html.escape(web_url("favicon.svg"))}" type="image/svg+xml"></head>')
+    privacy = PRIVACY.replace('</head>', f'<link rel="canonical" href="{html.escape(web_url("privacy/"))}"><link rel="icon" href="{html.escape(web_url("favicon.svg"))}" type="image/svg+xml">'
+                              + web_structured_data("개인정보처리방침", "privacy/", None) + '</head>')
     write_web_assets()
     (SITE / "privacy").mkdir(exist_ok=True); (SITE / "privacy" / "index.html").write_text(privacy, encoding="utf-8")
     months = sorted({d[:7] for d in days}, reverse=True)
