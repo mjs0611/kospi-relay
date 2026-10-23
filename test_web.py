@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import re
+import subprocess
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -401,6 +402,141 @@ class WebTests(unittest.TestCase):
         self.assertEqual(len(table.find('thead')[0].find('th')), 6)
         self.assertEqual(len(table.find('tbody')[0].find('td')), 5)
         self.assertEqual(table.find('tbody')[0].find('a')[0].attrs['href'], r.web_url('2026-09-23/'))
+
+    def test_web_motion_is_external_published_and_restyle_is_idempotent(self):
+        self.write(legacy_record('2026-09-23'))
+        r.regenerate(self.hist)
+        (self.site / 'latest.json').write_text(json.dumps({'date': '2026-09-23'}))
+        asset = self.site / 'motion.js'
+        expected = (Path(r.__file__).parent / 'assets' / 'motion.js').read_bytes()
+        self.assertEqual(asset.read_bytes(), expected)
+        protected = {p: p.read_bytes() for p in self.site.rglob('*')
+                     if p.is_file() and p.suffix != '.html' and p.name != 'motion.js'}
+        mains = {}
+        for page in self.site.rglob('*.html'):
+            doc = Document(page.read_text())
+            if not doc.find(cls='site-header'):
+                continue
+            mains[page] = doc.find('main')[0].text
+            scripts = [n for n in doc.find('script') if n.attrs.get('id') == 'market-motion']
+            self.assertEqual(len(scripts), 1)
+            self.assertEqual(scripts[0].attrs.get('src'), r.web_url('motion.js'))
+            self.assertIn('defer', scripts[0].attrs)
+            self.assertEqual(scripts[0].text, '')
+            # No-JS and reduced-motion readers start with the final, visible data.
+            self.assertFalse(doc.find(cls='motion-pending'))
+            self.assertTrue(all(n.text.endswith('%') for n in doc.find(cls='freq-pct')))
+        asset.write_text('stale managed motion asset')
+        r.restyle()
+        self.assertEqual(asset.read_bytes(), expected)
+        once = {p: p.read_bytes() for p in self.site.rglob('*.html')}
+        r.restyle()
+        self.assertEqual({p: p.read_bytes() for p in once}, once)
+        for page, main in mains.items():
+            doc = Document(page.read_text())
+            self.assertEqual(doc.find('main')[0].text, main)
+            self.assertEqual(len([n for n in doc.find('script') if n.attrs.get('id') == 'market-motion']), 1)
+        self.assertEqual({p: p.read_bytes() for p in protected}, protected)
+        self.fetch.assert_not_called()
+
+    def test_motion_lifecycle_baselines_and_reduced_motion_without_a_browser(self):
+        # Same Node/vm approach as the existing share fallback regression.
+        source = (Path(r.__file__).parent / 'assets' / 'motion.js').read_text()
+        subprocess.run(['node', '-e', r'''
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const source = process.argv[1];
+function fixture(reduce = false, broken = false) {
+  const animations = [], frames = new Map(), events = {}, preference = {};
+  let observer, nextFrame = 0;
+  class Element {
+    constructor(text = '', matches = {}) {
+      this.textContent = text;
+      this.matches = matches;
+      this.style = {};
+      const classes = new Set();
+      this.classList = {add: x => classes.add(x), remove: x => classes.delete(x), contains: x => classes.has(x)};
+    }
+    querySelectorAll(selector) { return this.matches[selector] || []; }
+    setAttribute(key, value) { this[key] = value; }
+    replaceChildren(...children) { this.children = children; }
+    animate(keyframes, options) {
+      const animation = {keyframes, options, element: this, cancel() { this.cancelled = true; }};
+      animations.push(animation);
+      if (broken) throw Error('animation unavailable');
+      return animation;
+    }
+  }
+  const bar = new Element();
+  bar.style.left = '10%';
+  bar.parentElement = new Element();
+  bar.parentElement.classList.add('ny-track');
+  const count = new Element('63%');
+  const mark = new Element();
+  mark.style.left = '75%';
+  mark.parentElement = {getBoundingClientRect: () => ({width: 320})};
+  const columns = [new Element('', {'.ny-track i, .frequency-track i': [bar]}),
+    new Element('', {'.freq-pct': [count]}), new Element('', {'.result-mark': [mark]})];
+  const row = new Element();
+  const document = {
+    hidden: false,
+    querySelectorAll: selector => selector.startsWith('.ny-area') ? columns : [row],
+    createElement: () => new Element(),
+    addEventListener: (type, fn) => { events[type] = fn; }
+  };
+  const window = {
+    matchMedia: () => ({matches: reduce, addEventListener: (type, fn) => { preference[type] = fn; }}),
+    addEventListener: (type, fn) => { events[type] = fn; },
+    IntersectionObserver: class {
+      constructor(callback) { this.callback = callback; this.watched = new Set(); observer = this; }
+      observe(element) { this.watched.add(element); }
+      unobserve(element) { this.watched.delete(element); }
+      disconnect() { this.watched.clear(); }
+    }
+  };
+  vm.runInNewContext(source, {window, document, Element, IntersectionObserver: window.IntersectionObserver,
+    performance: {now: () => 0}, requestAnimationFrame: fn => { frames.set(++nextFrame, fn); return nextFrame; },
+    cancelAnimationFrame: id => frames.delete(id)});
+  const reveal = element => observer.callback([{target: element, isIntersecting: true}]);
+  return {columns, row, bar, count, mark, animations, frames, events, preference, observer, reveal};
+}
+const f = fixture();
+assert.equal(f.observer.watched.size, 4);
+assert.ok(f.columns.every(element => element.classList.contains('motion-pending')));
+f.observer.callback([{target: f.columns[0], isIntersecting: false}]);
+assert.equal(f.animations.length, 0);
+f.columns.forEach(f.reveal);
+f.reveal(f.row);
+assert.equal(f.observer.watched.size, 0); // a second scroll cannot replay these elements
+assert.equal(f.bar.style.transformOrigin, 'right center');
+const slide = f.animations.find(animation => animation.element === f.mark);
+assert.equal(slide.keyframes[0].transform, 'translateX(calc(-50% + -80px))');
+assert.equal(slide.keyframes[1].transform, 'translateX(-50%)');
+assert.equal(f.count.children[0].textContent, '63%'); // final accessible value from the start
+assert.equal(f.count.children[1]['aria-hidden'], 'true');
+assert.equal(f.count.children[1].textContent, '0%');
+const tick = time => { const callbacks = [...f.frames.values()]; f.frames.clear(); callbacks.forEach(fn => fn(time)); };
+tick(375);
+assert.ok(parseInt(f.count.children[1].textContent) > 0 && parseInt(f.count.children[1].textContent) < 63);
+tick(800);
+assert.equal(f.count.textContent, '63%');
+assert.equal(f.frames.size, 0);
+const changed = fixture();
+changed.reveal(changed.columns[1]);
+changed.preference.change({matches: true});
+assert.equal(changed.count.textContent, '63%');
+assert.equal(changed.frames.size, 0);
+assert.ok(changed.animations.every(animation => animation.cancelled));
+assert.ok(changed.columns.every(element => !element.classList.contains('motion-pending')));
+const reduced = fixture(true);
+assert.equal(reduced.observer, undefined);
+assert.equal(reduced.count.textContent, '63%');
+assert.equal(reduced.animations.length, 0);
+const failed = fixture(false, true);
+failed.reveal(failed.columns[0]);
+assert.ok(failed.columns.every(element => !element.classList.contains('motion-pending')));
+assert.equal(failed.observer.watched.size, 0);
+''', source], check=True, capture_output=True, text=True)
 
     def test_company_return_and_skip_link_reach_focusable_main(self):
         doc = Document(r.web_shell('검토', '', '<h1>검토</h1>'))

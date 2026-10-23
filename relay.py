@@ -493,13 +493,14 @@ body{overflow-wrap:anywhere}.row-label{flex-wrap:wrap;gap:4px 12px}
 }
 .dx-more > summary::-webkit-details-marker { display: none; }
 .dx-more > summary::marker { content: ""; }
-.dx-more > summary:hover, .dx-more[open] > summary { background: var(--dx-hover); color: var(--dx-ink); }
-.dx-more > summary svg { width: 16px; height: 16px; flex: none; transition: transform .15s ease; }
+@media (hover: hover) and (pointer: fine) { .dx-more > summary:hover { background: var(--dx-hover); color: var(--dx-ink); } }
+.dx-more[open] > summary { background: var(--dx-hover); color: var(--dx-ink); }
+.dx-more > summary svg { width: 16px; height: 16px; flex: none; transition: transform 180ms var(--ease-out); }
 .dx-more[open] > summary svg { transform: rotate(180deg); }
 
 .dx-more__panel {
   position: absolute; left: var(--dx-space-2); right: var(--dx-space-2); top: calc(100% + 6px);
-  max-height: min(72vh, 640px); overflow: auto; overscroll-behavior: contain;
+  max-height: min(72dvh, 640px); overflow: auto; overscroll-behavior: contain;
   background: var(--dx-surface); color: var(--dx-ink);
   border: 1px solid var(--dx-line); border-radius: var(--dx-radius-l); box-shadow: var(--dx-shadow);
   padding: var(--dx-space-2);
@@ -511,7 +512,7 @@ body{overflow-wrap:anywhere}.row-label{flex-wrap:wrap;gap:4px 12px}
   min-height: 56px; padding: 10px var(--dx-space-3); border-radius: var(--dx-radius-m);
   color: var(--dx-ink); text-decoration: none;
 }
-.dx-more__list a:hover { background: var(--dx-hover); }
+@media (hover: hover) and (pointer: fine) { .dx-more__list a:hover { background: var(--dx-hover); } }
 .dx-more__name { font-size: var(--dx-text-md); font-weight: 700; line-height: var(--dx-leading-tight); }
 .dx-more__desc { grid-column: 1; font-size: var(--dx-text-xs); color: var(--dx-muted); line-height: 1.45; margin-top: 2px; }
 .dx-more__list a[aria-current="page"] { background: var(--dx-hover); }
@@ -525,7 +526,7 @@ body{overflow-wrap:anywhere}.row-label{flex-wrap:wrap;gap:4px 12px}
   min-height: 48px; margin-top: var(--dx-space-2); border-top: 1px solid var(--dx-line);
   font-size: var(--dx-text-sm); font-weight: 600; color: var(--dx-ink); text-decoration: none;
 }
-.dx-more__all:hover { text-decoration: underline; text-underline-offset: 4px; }
+@media (hover: hover) and (pointer: fine) { .dx-more__all:hover { text-decoration: underline; text-underline-offset: 4px; } }
 
 /* 3) 공용 푸터 ============================================================ */
 .dx-footer {
@@ -560,7 +561,7 @@ body{overflow-wrap:anywhere}.row-label{flex-wrap:wrap;gap:4px 12px}
   color: inherit; text-decoration: none;
 }
 .dx-back svg { width: 20px; height: 20px; }
-.dx-back:hover { text-decoration: underline; text-underline-offset: 4px; }
+@media (hover: hover) and (pointer: fine) { .dx-back:hover { text-decoration: underline; text-underline-offset: 4px; } }
 
 /* 5) PC (≥ 768px) ======================================================== */
 @media (min-width: 768px) {
@@ -593,6 +594,28 @@ body{overflow-wrap:anywhere}.row-label{flex-wrap:wrap;gap:4px 12px}
 .site-footer .notes{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;font-size:.9375rem;color:#4E5968}
 .site-footer .dx-footer{margin-top:8px}
 .dx-bar__in{max-width:calc(var(--dx-max) + 64px);padding:0 32px}@media(max-width:600px){.dx-bar__in{padding:0 20px}}
+
+/* Web motion only: shared SVGs and PNG capture styles stay static. */
+:root{--ease-out:cubic-bezier(.22,1,.36,1)}
+html{-webkit-text-size-adjust:100%}
+a,button,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button,summary{user-select:none;-webkit-user-select:none}
+.brand{display:inline-block}
+.share,.brand,.site-header nav a,.day-nav a,.section-heading>a,.dx-more>summary,.dx-bar__home,.dx-footer__brand{transition:transform 260ms var(--ease-out)}
+.share:active,.brand:active,.site-header nav a:active,.day-nav a:active,.section-heading>a:active,.dx-more>summary:active,.dx-bar__home:active,.dx-footer__brand:active{transform:scale(.96);filter:brightness(.9);transition-duration:90ms}
+.dx-more__list a,.table-scroll tbody tr{transition:transform 260ms var(--ease-out)}
+.dx-more__list a:active,.table-scroll tbody tr:has(a:active){background:#F2F4F6;transform:scale(.98);transition-duration:90ms}
+.table-scroll tbody tr:has(a:active)>th,.table-scroll tbody tr:focus-within>th{background:#F2F4F6}
+.table-scroll tbody tr:focus-within{background:#F2F4F6}
+.freq-pct{position:relative;font-variant-numeric:tabular-nums}
+.count-final{opacity:0}
+.count-visual{position:absolute;inset:0;text-align:right}
+@media (hover: hover) and (pointer: fine){.table-scroll tbody tr:hover,.table-scroll tbody tr:hover>th{background:#F2F4F6}}
+@media (prefers-reduced-motion: no-preference){.motion-pending{opacity:0;transform:translateY(18px)}}
+@media (prefers-reduced-motion: reduce){
+  .share,.brand,.site-header nav a,.day-nav a,.section-heading>a,.dx-more>summary,.dx-bar__home,.dx-footer__brand,.dx-more__list a,.table-scroll tbody tr{transition:none;transform:none!important}
+}
+@media print{.motion-pending{opacity:1;transform:none}}
 """
 
 
@@ -627,6 +650,10 @@ def web_words(value, verb):
 
 def web_url(path=""):
     return SITE_URL.rstrip("/") + "/" + path.lstrip("/")
+
+
+def web_motion_script():
+    return f'<script id="market-motion" defer src="{html.escape(web_url("motion.js"))}"></script>'
 
 
 WEB_TABLE_SCRIPT = """<script id="market-table-keys">
@@ -716,7 +743,7 @@ shareButton.addEventListener('click', async function () {{
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>{WEB_CSS}</style></head><body><a class="skip" href="#main">본문으로 이동</a>{DX_BAR}<div class="wrap">
 <header class="site-header"><a class="brand" href="{e(web_url())}">밤사이 코스피</a><nav aria-label="사이트"><a href="{e(web_url('archive/' + image_day[:7] + '/')) if image_day else e(web_url() + '#records')}">지난 기록</a><a href="{e(web_url('about/'))}">집계 기준</a></nav></header>
-<main id="main" tabindex="-1">{body}</main>{web_footer()}</div>{share_script}{DX_CLOSE_JS}{WEB_TABLE_SCRIPT if 'class="table-scroll"' in body else ''}</body></html>'''
+<main id="main" tabindex="-1">{body}</main>{web_footer()}</div>{share_script}{DX_CLOSE_JS}{WEB_TABLE_SCRIPT if 'class="table-scroll"' in body else ''}{web_motion_script()}</body></html>'''
 
 
 def web_frequency(record, hist):
@@ -944,7 +971,7 @@ def restyle():
     def protected():
         return {str(p.relative_to(SITE)): hashlib.sha256(p.read_bytes()).hexdigest()
                 for p in SITE.rglob('*') if p.is_file() and '.git' not in p.relative_to(SITE).parts
-                and p.suffix != '.html' and p.relative_to(SITE).as_posix() != 'favicon.svg'}
+                and p.suffix != '.html' and p.relative_to(SITE).as_posix() not in ('favicon.svg', 'motion.js')}
 
     def main_text(source):
         bodies = re.findall(r'<main(?:\s[^>]*)?>(.*?)</main>', source, re.S)
@@ -1014,6 +1041,8 @@ def restyle():
         text = re.sub(r'<script id="market-table-keys">.*?</script>', '', text, flags=re.S)
         if tables:
             text = text.replace('</body>', WEB_TABLE_SCRIPT + '</body>')
+        text = re.sub(r'<script\b[^>]*\bid="market-motion"[^>]*>.*?</script>', '', text, flags=re.S)
+        text = text.replace('</body>', web_motion_script() + '</body>', 1)
         if main_text(source) != main_text(text) or re.findall(table_pattern, source, re.S) != re.findall(table_pattern, text, re.S):
             raise RuntimeError(f'Published financial content changed in {page.name}')
         updates[page] = text
@@ -1024,7 +1053,7 @@ def restyle():
     write_web_assets()
     if protected() != before:
         raise RuntimeError('Published non-HTML files changed; refusing publication')
-    print(f'restyled {len(updates)} existing pages; financial text, tables and published data hashes unchanged; refreshed favicon.svg')
+    print(f'restyled {len(updates)} existing pages; financial text, tables and published data hashes unchanged; refreshed favicon.svg and motion.js')
 
 
 def load_web_records():
@@ -1278,7 +1307,8 @@ def write_site_files(days):
 
 
 def write_web_assets():
-    shutil.copyfile(Path(__file__).parent / 'assets' / 'favicon.svg', SITE / 'favicon.svg')
+    for name in ('favicon.svg', 'motion.js'):
+        shutil.copyfile(Path(__file__).parent / 'assets' / name, SITE / name)
 
 
 def backfill(n):
