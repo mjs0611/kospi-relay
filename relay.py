@@ -733,7 +733,7 @@ shareButton.addEventListener('click', async function () {{
 }});
 </script>"""
     ad_head = f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={e(ADSENSE)}" crossorigin="anonymous"></script>' if ADSENSE else ""
-    return f'''<!doctype html><html lang="ko"><head>{CSP}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    return f'''<!doctype html><html lang="ko"><head>{CSP}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff">
 <title>{e(title)} | 밤사이 코스피</title><meta name="description" content="{e(description)}">{robots_meta}
 <link rel="canonical" href="{e(url)}"><meta property="og:url" content="{e(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="밤사이 코스피"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(description)}">{image_meta}{ad_head}
 {WEB_ANALYTICS}
@@ -1279,7 +1279,7 @@ def write_index():
     (SITE / "index.json").write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
 
 
-PRIVACY = """<!doctype html><html lang="ko"><head>""" + CSP + """<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+PRIVACY = """<!doctype html><html lang="ko"><head>""" + CSP + """<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff">
 """ + WEB_ANALYTICS + """
 <title>개인정보처리방침 · 밤사이 코스피</title><style>body{font:15px/1.7 -apple-system,"Apple SD Gothic Neo",sans-serif;max-width:640px;margin:0 auto;padding:24px 16px;color:#191F28;background:#FFF}h1{font-size:20px}h2{font-size:16px;margin-top:28px}</style></head><body>
 <h1>개인정보처리방침</h1>
