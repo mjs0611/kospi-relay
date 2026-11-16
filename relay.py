@@ -616,6 +616,7 @@ button,summary{user-select:none;-webkit-user-select:none}
   .share,.brand,.site-header nav a,.day-nav a,.section-heading>a,.dx-more>summary,.dx-bar__home,.dx-footer__brand,.dx-more__list a,.table-scroll tbody tr{transition:none;transform:none!important}
 }
 @media print{.motion-pending{opacity:1;transform:none}}
+:where(h1,h2,h3){text-wrap:balance}:where(p,li,dd,figcaption){text-wrap:pretty}
 """
 
 
