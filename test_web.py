@@ -178,6 +178,15 @@ class WebTests(unittest.TestCase):
         self.assertIn(loaders[0], doc.find('head')[0].find('script'))
         self.assertFalse(any('cloudflareinsights.com' in n.attrs.get('src', '') for n in doc.find('script')))
 
+    def assert_not_found_page(self):
+        source = (self.site / '404.html').read_text(encoding='utf-8')
+        self.assertIn('<meta name="robots" content="noindex">', source)
+        self.assertIn('<h1>찾는 페이지가 없어요</h1>', source)
+        self.assertIn(f'<a class="nf-home" href="{r.web_url()}">', source)
+        self.assertRegex(source, r'\.nf-home\{[^}]*min-height:52px')
+        self.assertRegex(source, r'\.nf-links a\{[^}]*min-height:44px')
+        self.assertNotRegex(source, r'adsbygoogle|ditoaxis\.com/m\.js|rel="canonical"')
+
     def test_analytics_in_every_generated_web_head_with_or_without_ads(self):
         self.write(legacy_record('2026-09-23'))
         self.write(legacy_record('2026-10-12'))
@@ -187,8 +196,9 @@ class WebTests(unittest.TestCase):
         for client in ('', 'ca-pub-fixture'):
             with self.subTest(client=client), patch.object(r, 'ADSENSE', client), patch.object(r, 'ADSENSE_SLOT', '12345'):
                 r.regenerate(self.hist)
-                pages = list(self.site.rglob('*.html'))
+                pages = [p for p in self.site.rglob('*.html') if p.name != '404.html']
                 self.assertEqual(len(pages), 8)
+                self.assert_not_found_page()
                 for page in pages:
                     source = page.read_text()
                     doc = Document(source)
@@ -213,7 +223,7 @@ class WebTests(unittest.TestCase):
         (orphan / 'index.html').write_text('<div>old orphan page</div>')
         r.regenerate(self.hist)
         home = r.web_url()
-        pages = sorted(self.site.rglob('*.html'))
+        pages = sorted(p for p in self.site.rglob('*.html') if p.name != '404.html')
         self.assertEqual(len(pages), 8)
         for page in pages:
             route = page.parent.relative_to(self.site).as_posix()
