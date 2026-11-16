@@ -992,6 +992,8 @@ def restyle():
     updates = {}
     table_pattern = r'(<table class="(?:comparison-table|archive-table)".*?</table>)'
     for page in sorted(SITE.rglob('*.html')):
+        if page == SITE / '404.html':
+            continue  # 공통 404 틀은 regenerate가 새로 쓰고, restyle은 손대지 않는다
         source = page.read_text(encoding='utf-8')
         text = add_web_analytics(source)
         if text is not None:
@@ -1291,6 +1293,20 @@ PRIVACY = """<!doctype html><html lang="ko"><head>""" + CSP + """<meta charset="
 </body></html>"""
 
 
+# 없는 주소 안내(9곳 공통 404 틀). GitHub Pages는 어느 깊이에서든 이 파일을 보여 주므로 링크는 절대 주소로 쓴다.
+# 광고·통계 없이 noindex로 두고, restyle은 이 파일을 건드리지 않는다.
+NOT_FOUND_CSS = "*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:#fff;color:#191F28;font-family:Pretendard,'Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;line-height:1.6;word-break:keep-all}.nf{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:48px 24px}.nf-box{width:100%;max-width:400px}.nf-code{margin:0 0 8px;font-size:14px;font-weight:600;color:#4E5968}.nf h1{margin:0 0 12px;font-size:26px;line-height:1.35;font-weight:700;letter-spacing:-.02em;text-wrap:balance}.nf-desc{margin:0 0 28px;font-size:16px;color:#4E5968;text-wrap:pretty}.nf-home{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;padding:0 20px;border-radius:12px;background:#1B64DA;color:#fff;font-size:17px;font-weight:600;text-decoration:none;transition:transform 90ms ease-out,background-color 90ms ease-out}.nf-home:active{transform:scale(.97);background:#1957C2}.nf-home:focus-visible,.nf-links a:focus-visible{outline:2px solid #1B64DA;outline-offset:3px}.nf-links{list-style:none;margin:20px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 8px;justify-content:center}.nf-links a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border-radius:8px;color:#333D4B;font-size:15px;text-decoration:none;transition:background-color 80ms ease-out}.nf-links a:active{background:#F2F4F6}@media (hover:hover) and (pointer:fine){.nf-home:hover{background:#1957C2}.nf-links a:hover{background:#F2F4F6}}@media (prefers-reduced-motion:reduce){.nf-home,.nf-links a{transition:none}.nf-home:active{transform:none}}"
+
+
+def web_not_found():
+    links = [(web_url("about/"), "보는 법"), ("https://ditoaxis.com/apps/", "디토엑시스 다른 서비스")]
+    items = "".join(f'<li><a href="{html.escape(u)}">{html.escape(t)}</a></li>' for u, t in links)
+    return ('<!doctype html>\n<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+            '<meta name="color-scheme" content="light"><meta name="theme-color" content="#ffffff"><meta name="robots" content="noindex">'
+            f'<title>찾는 페이지가 없어요 | 밤사이 코스피</title><link rel="icon" href="{html.escape(web_url("favicon.svg"))}" type="image/svg+xml"><style>{NOT_FOUND_CSS}</style></head>'
+            '<body><main class="nf" id="main"><div class="nf-box"><p class="nf-code">404</p><h1>찾는 페이지가 없어요</h1><p class="nf-desc">주소가 바뀌었거나 잘못 입력했을 수 있어요.</p>'
+            f'<a class="nf-home" href="{html.escape(web_url())}">밤사이 코스피 첫 화면으로 가기</a><ul class="nf-links" aria-label="주요 화면">{items}</ul></div></main></body></html>\n')
+
 def write_site_files(days):
     """검색·광고 심사용 정적 파일. SITE_URL이 github.io가 아니면 CNAME도 쓴다(Pages 커스텀 도메인)."""
     privacy = PRIVACY.replace('</head>', f'<link rel="canonical" href="{html.escape(web_url("privacy/"))}"><link rel="icon" href="{html.escape(web_url("favicon.svg"))}" type="image/svg+xml">'
@@ -1302,6 +1318,7 @@ def write_site_files(days):
     (SITE / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
                                       + "".join(f"<url><loc>{html.escape(u)}</loc></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
     (SITE / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
+    (SITE / "404.html").write_text(web_not_found(), encoding="utf-8")
     host = SITE_URL.split("//", 1)[1].split("/", 1)[0]
     if not host.endswith("github.io"): (SITE / "CNAME").write_text(host + "\n", encoding="utf-8")
 
