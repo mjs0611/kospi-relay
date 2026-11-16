@@ -446,7 +446,7 @@ class WebTests(unittest.TestCase):
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const source = process.argv[1];
-function fixture(reduce = false, broken = false) {
+function fixture(reduce = false, broken = false, storage = undefined) {
   const animations = [], frames = new Map(), events = {}, preference = {};
   let observer, nextFrame = 0;
   class Element {
@@ -485,6 +485,7 @@ function fixture(reduce = false, broken = false) {
     addEventListener: (type, fn) => { events[type] = fn; }
   };
   const window = {
+    localStorage: storage,
     matchMedia: () => ({matches: reduce, addEventListener: (type, fn) => { preference[type] = fn; }}),
     addEventListener: (type, fn) => { events[type] = fn; },
     IntersectionObserver: class {
@@ -516,7 +517,7 @@ assert.equal(f.count.children[0].textContent, '63%'); // final accessible value 
 assert.equal(f.count.children[1]['aria-hidden'], 'true');
 assert.equal(f.count.children[1].textContent, '0%');
 const tick = time => { const callbacks = [...f.frames.values()]; f.frames.clear(); callbacks.forEach(fn => fn(time)); };
-tick(375);
+tick(200);
 assert.ok(parseInt(f.count.children[1].textContent) > 0 && parseInt(f.count.children[1].textContent) < 63);
 tick(800);
 assert.equal(f.count.textContent, '63%');
@@ -536,6 +537,23 @@ const failed = fixture(false, true);
 failed.reveal(failed.columns[0]);
 assert.ok(failed.columns.every(element => !element.classList.contains('motion-pending')));
 assert.equal(failed.observer.watched.size, 0);
+// Counting runs on the first view of the Seoul day only; storage failures keep the old behavior.
+const saved = new Map();
+const store = {getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, String(value))};
+const first = fixture(false, false, store);
+assert.equal(first.observer.watched.size, 4);
+first.reveal(first.columns[1]);
+const today = new Intl.DateTimeFormat('en-CA', {timeZone: 'Asia/Seoul'}).format(new Date());
+assert.equal(saved.get('kospi-motion-day'), today);
+assert.ok(first.animations.every(animation => animation.options.duration <= 400));
+const again = fixture(false, false, store);
+assert.equal(again.observer, undefined);
+assert.equal(again.count.textContent, '63%');
+assert.equal(again.animations.length, 0);
+saved.set('kospi-motion-day', '2000-01-01');
+assert.equal(fixture(false, false, store).observer.watched.size, 4);
+const denied = fixture(false, false, {getItem() { throw Error('denied'); }, setItem() { throw Error('denied'); }});
+assert.equal(denied.observer.watched.size, 4);
 ''', source], check=True, capture_output=True, text=True)
 
     def test_company_return_and_skip_link_reach_focusable_main(self):

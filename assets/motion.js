@@ -4,8 +4,19 @@
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   if (reduced.matches || !window.IntersectionObserver || !Element.prototype.animate) return;
 
+  // Numbers count up only on the first view of the day (Seoul date). Later visits show the final values at once.
+  const seenKey = 'kospi-motion-day';
+  let today = '';
+  try {
+    today = new Intl.DateTimeFormat('en-CA', {timeZone: 'Asia/Seoul'}).format(new Date());
+    if (window.localStorage.getItem(seenKey) === today) return;
+  } catch (_) { /* Storage is optional; without it the motion behaves as before. */ }
+  function markSeen() {
+    try { if (today) window.localStorage.setItem(seenKey, today); } catch (_) { /* Storage is optional. */ }
+  }
+
   const easing = 'cubic-bezier(.22,1,.36,1)';
-  const duration = 650;
+  const duration = 400;
   const active = new Set();
   const columns = [...document.querySelectorAll('.ny-area, .frequency-area, .result-area')];
   const rows = [...document.querySelectorAll('.comparison-table tbody tr')];
@@ -55,6 +66,7 @@
   }
 
   function reveal(element) {
+    markSeen();
     const delay = delays.get(element);
     animate(element, [
       {opacity: 0, transform: 'translateY(18px)'},
