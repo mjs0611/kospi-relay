@@ -34,3 +34,20 @@ RELAY_DATE=2026-09-04 python relay.py open   # 로컬 재현
 cp ops/com.junseungmo.kospi-relay.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.junseungmo.kospi-relay.plist
 tail -f ~/Library/Logs/kospi-relay.log
 ```
+
+## latest.json·days/*.json의 코스피 지수 값
+
+`open`·`close`·`prev.kospi`는 지수 값이 아니라 기준 종가 대비 등락률(비율, 예: `-0.0259`)입니다. 지수 수준은 따로 내보냅니다.
+
+| 필드 | 형식 | 뜻 |
+|---|---|---|
+| `indexValue` | number(소수 둘째 자리) 또는 `null` | `indexDate` 하루의 코스피 종가(포인트) |
+| `indexDate` | `"YYYY-MM-DD"` 또는 `null` | 지수 값의 기준일. 값이 있으면 항상 `date`와 같습니다 |
+
+- 출처는 기존 수집과 같은 무료 공개 자료인 Yahoo Finance `^KS11` 일봉(yfinance)입니다. 따로 요청을 늘리지 않습니다.
+- 마감 확정(`status: "done"`)일 때만 채웁니다. 장중 일봉의 Close는 현재가라서 `pending`·`filled`에서는 둘 다 `null`입니다.
+- 상류에 그날 종가가 없거나 0·NaN·무한대면, 같은 날짜로 이미 게시한 `indexValue`만 다시 씁니다. 그것도 없으면 숫자를 만들지 않고 `null`로 둡니다.
+
+```json
+{"date": "2026-11-17", "status": "done", "close": -0.025883740717821735, "indexValue": 4968.48, "indexDate": "2026-11-17"}
+```
