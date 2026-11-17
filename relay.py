@@ -1295,7 +1295,7 @@ PRIVACY = """<!doctype html><html lang="ko"><head>""" + CSP + """<meta charset="
 
 
 # 없는 주소 안내(9곳 공통 404 틀). GitHub Pages는 어느 깊이에서든 이 파일을 보여 주므로 링크는 절대 주소로 쓴다.
-# 광고·통계 없이 noindex로 두고, restyle은 이 파일을 건드리지 않는다.
+# 광고 없이 noindex로 두고, 방문 통계는 다른 페이지·fx 404와 같은 공용 로더(m.js) 1개만 둔다. restyle은 이 파일을 건드리지 않는다.
 NOT_FOUND_CSS = "*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:#fff;color:#191F28;font-family:Pretendard,'Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;line-height:1.6;word-break:keep-all}.nf{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:48px 24px}.nf-box{width:100%;max-width:400px}.nf-code{margin:0 0 8px;font-size:14px;font-weight:600;color:#4E5968}.nf h1{margin:0 0 12px;font-size:26px;line-height:1.35;font-weight:700;letter-spacing:-.02em;text-wrap:balance}.nf-desc{margin:0 0 28px;font-size:16px;color:#4E5968;text-wrap:pretty}.nf-home{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;padding:0 20px;border-radius:12px;background:#1B64DA;color:#fff;font-size:17px;font-weight:600;text-decoration:none;transition:transform 90ms ease-out,background-color 90ms ease-out}.nf-home:active{transform:scale(.97);background:#1957C2}.nf-home:focus-visible,.nf-links a:focus-visible{outline:2px solid #1B64DA;outline-offset:3px}.nf-links{list-style:none;margin:20px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 8px;justify-content:center}.nf-links a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border-radius:8px;color:#333D4B;font-size:15px;text-decoration:none;transition:background-color 80ms ease-out}.nf-links a:active{background:#F2F4F6}@media (hover:hover) and (pointer:fine){.nf-home:hover{background:#1957C2}.nf-links a:hover{background:#F2F4F6}}@media (prefers-reduced-motion:reduce){.nf-home,.nf-links a{transition:none}.nf-home:active{transform:none}}"
 
 
@@ -1304,7 +1304,7 @@ def web_not_found():
     items = "".join(f'<li><a href="{html.escape(u)}">{html.escape(t)}</a></li>' for u, t in links)
     return ('<!doctype html>\n<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
             '<meta name="color-scheme" content="light"><meta name="theme-color" content="#ffffff"><meta name="robots" content="noindex">'
-            f'<title>찾는 페이지가 없어요 | 밤사이 코스피</title><link rel="icon" href="{html.escape(web_url("favicon.svg"))}" type="image/svg+xml"><style>{NOT_FOUND_CSS}</style></head>'
+            f'<title>찾는 페이지가 없어요 | 밤사이 코스피</title><link rel="icon" href="{html.escape(web_url("favicon.svg"))}" type="image/svg+xml"><style>{NOT_FOUND_CSS}</style>{WEB_ANALYTICS}</head>'
             '<body><main class="nf" id="main"><div class="nf-box"><p class="nf-code">404</p><h1>찾는 페이지가 없어요</h1><p class="nf-desc">주소가 바뀌었거나 잘못 입력했을 수 있어요.</p>'
             f'<a class="nf-home" href="{html.escape(web_url())}">밤사이 코스피 첫 화면으로 가기</a><ul class="nf-links" aria-label="주요 화면">{items}</ul></div></main></body></html>\n')
 

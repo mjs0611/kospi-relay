@@ -185,7 +185,9 @@ class WebTests(unittest.TestCase):
         self.assertIn(f'<a class="nf-home" href="{r.web_url()}">', source)
         self.assertRegex(source, r'\.nf-home\{[^}]*min-height:52px')
         self.assertRegex(source, r'\.nf-links a\{[^}]*min-height:44px')
-        self.assertNotRegex(source, r'adsbygoogle|ditoaxis\.com/m\.js|rel="canonical"')
+        self.assertNotRegex(source, r'adsbygoogle|rel="canonical"')
+        self.assertEqual(source.count('<script defer src="https://ditoaxis.com/m.js"></script>'), 1)
+        self.assert_web_analytics(Document(source))
 
     def test_analytics_in_every_generated_web_head_with_or_without_ads(self):
         self.write(legacy_record('2026-09-23'))
