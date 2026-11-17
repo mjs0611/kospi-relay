@@ -1175,6 +1175,24 @@ def preserve_day(previous, prev, us, vix_lv, opened, closed_pct):
     return prev, us, vix_lv, opened, closed_pct
 
 
+def index_level(K, D, status, previous=None):
+    """코스피 지수 종가(포인트)와 기준일. close·open·prev.kospi는 등락률이고 이 값만 지수 수준이다.
+    마감 확정(done)일 때 야후 ^KS11 일봉의 D일 Close만 쓴다(장중 Close는 현재가). 상류에 없으면
+    같은 날짜로 이미 게시한 값만 재사용하고, 그것도 없으면 숫자를 만들지 않고 None으로 둔다."""
+    day = f"{D:%Y-%m-%d}"
+    if status != "done":
+        return None, None
+    value = K.Close.get(D) if D in K.index else None
+    if value is not None and np.isfinite(value) and value > 0:
+        return round(float(value), 2), day
+    old = (previous or {}).get("indexValue")
+    if (previous or {}).get("date") == day and (previous or {}).get("indexDate") == day and isinstance(old, (int, float)) \
+            and not isinstance(old, bool) and np.isfinite(old) and old > 0:
+        print("::warning::KOSPI index close missing upstream; reusing same-day published level")
+        return float(old), day
+    return None, None
+
+
 def restore_session(K, previous):
     """발행분(open·close = 기준일 종가 대비 %)으로 상류에서 사라진 세션 한 개를 복원. 마감 확정(done)·기준일 존재·수치 유효일 때만."""
     day, basis = pd.Timestamp(previous["date"]), pd.Timestamp(previous.get("prev", {}).get("date") or "1970-01-01")
@@ -1252,8 +1270,9 @@ def build(phase):
     tail = tail_text(status, closed_pct, us_hours(D)[0])
     prev_link = f"{prev['date']:%Y-%m-%d}" if (SITE / f"{prev['date']:%Y-%m-%d}").exists() else None
     source_states, source_dates, source_note = source_provenance(raw, D, us, observed_us, saved)
+    index_value, index_date = index_level(raw["KOSPI"], D, status, saved)
     payload = json.dumps({"source_states": source_states, "source_dates": source_dates, "source_note": source_note, "date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
-        "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": tail, "freq": f,
+        "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "indexValue": index_value, "indexDate": index_date, "tail": tail, "freq": f,
         "head": headline(f, opened, status, source_states), "sentence": sentence(f, source_states) if f and f["n"] else None, "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
         "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}, ensure_ascii=False, default=float, allow_nan=False)
     day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
@@ -1346,10 +1365,11 @@ def backfill(n):
             f = None  # keep the published no-session flag; backfill must not turn it into a waiting state
         status = "done" if closed_pct is not None else "filled" if opened is not None else "pending"
         source_states, source_dates, source_note = source_provenance(raw, D, us, observed_us, saved)
+        index_value, index_date = index_level(K, D, status, saved)
         day = SITE / f"{D:%Y-%m-%d}"; day.mkdir(parents=True, exist_ok=True)
         payload = {"source_states": source_states, "source_dates": source_dates, "source_note": source_note,
             "date": f"{D:%Y-%m-%d}", "status": status, "prev": {**prev, "date": f"{prev['date']:%Y-%m-%d}"},
-            "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "tail": None, "freq": f,
+            "us": {k: (list(w[:2]) if w and w[1] is not None else None) for k, w in us.items()}, "vix": vix_lv, "open": opened, "close": closed_pct, "indexValue": index_value, "indexDate": index_date, "tail": None, "freq": f,
             "head": headline(f, opened, status, source_states), "sentence": sentence(f, source_states) if f and f["n"] else None,
             "ny": ny_svg(us), "kr": kr_svg(f, opened, status),
             "built_at": dt.datetime.now(KST).isoformat(timespec="minutes")}

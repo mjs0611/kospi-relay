@@ -105,12 +105,13 @@ def check():
         assert recovered["head"]["cond"] == "이전에 확인한 뉴욕 자료예요"
         assert recovered["sentence"].startswith("이전에 확인한 뉴욕 자료예요.")
         assert "이전에 확인한 미국 증시 자료예요" in (Path(tmp) / "index.html").read_text()
-        for key in ("us", "open", "close"):
+        for key in ("us", "open", "close", "indexValue", "indexDate"):
             assert recovered[key] == good[key], key
+        assert good["indexValue"] == 106.0 and good["indexDate"] == "2026-09-10"  # 상류 종가가 사라져도 같은 날 게시값만 재사용
         r.backfill(1)
         archive = Path(tmp) / "days/2026-09-10.json"
         recovered_archive = json.loads(archive.read_text())
-        for key in ("status", "us", "open", "close"):
+        for key in ("status", "us", "open", "close", "indexValue", "indexDate"):
             assert recovered_archive[key] == good[key], key
         archive_snapshot = archive.read_bytes()
         snapshot = latest.read_bytes()
@@ -258,9 +259,49 @@ def check_restore_same_day():
     print("same-day restore ok")
 
 
+def check_index_value():
+    """indexValue는 코스피 지수 종가(포인트), indexDate는 그 기준일. 마감 확정 때만 채우고 못 받으면 null."""
+    dates = r.pd.to_datetime(["2026-09-03", "2026-09-04", "2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10"])
+    prices = r.pd.DataFrame({"Open": [100, 101, 102, 103, 104, 105], "Close": [101, 102, 103, 104, 105, 4012.348]}, index=dates, dtype=float)
+    D = dates[-1]
+    K = prices.copy()
+    assert r.index_level(K, D, "done") == (4012.35, "2026-09-10")
+    assert r.index_level(K, D, "filled") == (None, None)   # 장중 Close는 현재가라 쓰지 않는다
+    assert r.index_level(K, D, "pending") == (None, None)
+    for bad in (r.np.nan, r.np.inf, 0.0, -1.0):
+        K.loc[D, "Close"] = bad
+        assert r.index_level(K, D, "done") == (None, None), bad
+        same = {"date": "2026-09-10", "indexDate": "2026-09-10", "indexValue": 4012.35}
+        assert r.index_level(K, D, "done", same) == (4012.35, "2026-09-10")
+        for stale in ({**same, "date": "2026-09-09"}, {**same, "indexDate": "2026-09-09"}, {**same, "indexValue": True},
+                      {**same, "indexValue": "4012.35"}, {**same, "indexValue": 0}, {**same, "indexValue": None}, {"date": "2026-09-10"}):
+            assert r.index_level(K, D, "done", stale) == (None, None), stale
+    assert r.index_level(prices.drop(D), D, "done") == (None, None)
+
+    def screenshot(_, png):
+        png.write_bytes(b"test")
+
+    raw = {k: prices.copy() for k in r.TICK}
+    with tempfile.TemporaryDirectory() as tmp, patch.object(r, "SITE", Path(tmp)), patch.object(r, "fetch", return_value=raw), patch.object(r, "screenshot", side_effect=screenshot), patch.dict(r.os.environ, {"RELAY_DATE": "2026-09-10"}):
+        for phase, value in (("morning", None), ("open", None), ("close", 4012.35)):
+            r.build(phase)
+            day = json.loads((Path(tmp) / "latest.json").read_text())
+            assert day["indexValue"] == value and day["indexDate"] == ("2026-09-10" if value else None), (phase, day["indexValue"])
+            if phase == "close":  # 기존 close는 그대로 전일 종가 대비 등락률(비율)이다
+                assert abs(day["close"] - (4012.348 / 105 - 1)) < 1e-9
+            else:
+                assert day["close"] is None
+            assert day["date"] == "2026-09-10" and json.loads((Path(tmp) / "days/2026-09-10.json").read_text())["indexValue"] == value
+        r.backfill(1)
+        archived = json.loads((Path(tmp) / "days/2026-09-10.json").read_text())
+        assert archived["indexValue"] == 4012.35 and archived["indexDate"] == "2026-09-10"
+    print("index value ok")
+
+
 if __name__ == "__main__":
     with patch.object(r.dt, "datetime", Clock), contextlib.redirect_stdout(io.StringIO()):
         check()
         check_restore()
         check_restore_same_day()
+        check_index_value()
     print("missing prices ok")
